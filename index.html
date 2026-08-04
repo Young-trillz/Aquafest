@@ -84,6 +84,14 @@ a{color:inherit;}
   background:rgba(255,255,255,0.1);
   padding:8px 14px;border-radius:20px;
   font-size:13px !important;
+  color:rgba(255,255,255,0.9);
+  text-decoration:none;
+  font-weight:600;
+  flex-shrink:0;
+  transition:background .2s;
+}
+.staff-link:hover{
+  background:rgba(255,255,255,0.18);
 }
 
 /* ---------- HERO ---------- */
@@ -354,6 +362,10 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
   .count-ring .num{font-size:22px;}
   .section{padding:50px 0;}
 }
+@media(max-width:400px){
+  .wordmark-text{font-size:12px;letter-spacing:1px;}
+  .staff-link{padding:7px 10px;font-size:12px !important;}
+}
 </style>
 </head>
 <body>
@@ -368,8 +380,8 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
     <div class="nav-links">
       <a href="#tickets">Get Tickets</a>
       <a href="#how">How it works</a>
-      <a href="#" id="staffNavLink" class="staff-link">Gate Staff →</a>
     </div>
+    <a href="#" id="staffNavLink" class="staff-link">Gate Staff →</a>
   </div>
 </div>
 
