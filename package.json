@@ -1,0 +1,13 @@
+{
+  "name": "aquafest-ticketing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AquaFest online ticketing: countdown, Paystack checkout, QR gate passes, and a gate-staff scanner.",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "qrcode": "^1.5.3"
+  }
+}
