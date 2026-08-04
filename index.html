@@ -533,7 +533,7 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
 </div>
 
 <footer>
-  AquaFest by <strong>HOH</strong> — this page is a working prototype. Payment &amp; email delivery are stubbed for a Paystack + email backend (see code comments).
+  AquaFest by <strong>HOH</strong> — tickets, payment, and gate check-in all run live.
 </footer>
 
 <script>
@@ -612,6 +612,23 @@ setInterval(tickCountdown, 1000);
 tickCountdown();
 
 /* ============================================================
+   QUANTITY + TOTAL
+   (declared before PRICE DISPLAY below, since renderPrice() calls
+   updateTotal() immediately — qty must exist before that runs)
+   ============================================================ */
+let qty = 1;
+function updateTotal(){
+  document.getElementById('qtyNum').textContent = qty;
+  document.getElementById('totalDisplay').textContent = fmtMoney(currentUnitPrice() * qty);
+}
+document.getElementById('qtyMinus').addEventListener('click', ()=>{
+  if(qty>1){ qty--; updateTotal(); }
+});
+document.getElementById('qtyPlus').addEventListener('click', ()=>{
+  if(qty<10){ qty++; updateTotal(); }
+});
+
+/* ============================================================
    PRICE DISPLAY
    ============================================================ */
 function renderPrice(){
@@ -625,22 +642,6 @@ function renderPrice(){
 }
 renderPrice();
 setInterval(renderPrice, 60*1000);
-
-/* ============================================================
-   QUANTITY + TOTAL
-   ============================================================ */
-let qty = 1;
-function updateTotal(){
-  document.getElementById('qtyNum').textContent = qty;
-  document.getElementById('totalDisplay').textContent = fmtMoney(currentUnitPrice() * qty);
-}
-document.getElementById('qtyMinus').addEventListener('click', ()=>{
-  if(qty>1){ qty--; updateTotal(); }
-});
-document.getElementById('qtyPlus').addEventListener('click', ()=>{
-  if(qty<10){ qty++; updateTotal(); }
-});
-updateTotal();
 
 /* ============================================================
    PURCHASE FLOW
