@@ -10,11 +10,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
-/* ============================================================
-   CONFIG IS AT THE BOTTOM OF THE <script> BLOCK — search "CONFIG"
-   That's where you set the real event date, prices, etc.
-   ============================================================ */
-
 :root{
   --pool-deep:#063a52;
   --pool-mid:#0c5a7a;
@@ -167,6 +162,13 @@ a{color:inherit;}
   background:rgba(255,255,255,0.12);color:var(--white);
   border:1px solid rgba(255,255,255,0.3);
 }
+.btn-secondary{
+  background:var(--pool-deep);color:#fff;
+}
+.btn-outline{
+  background:transparent;color:var(--pool-deep);
+  border:1.5px solid #dbeef0;
+}
 
 .wave-wrap{
   position:absolute;bottom:-2px;left:0;width:100%;line-height:0;z-index:2;
@@ -181,7 +183,6 @@ a{color:inherit;}
   .wave-anim{animation:none;}
 }
 
-/* floaty bg blobs */
 .blob{position:absolute;border-radius:50%;opacity:0.14;filter:blur(2px);}
 .blob1{width:180px;height:180px;background:var(--sun);top:40px;left:-40px;}
 .blob2{width:120px;height:120px;background:var(--coral);top:120px;right:-20px;}
@@ -304,7 +305,7 @@ a{color:inherit;}
 .step h3{font-size:16px;color:var(--pool-deep);}
 .step p{font-size:13px;color:#678;margin-top:6px;line-height:1.5;}
 
-/* ---------- STAFF / SCANNER ---------- */
+/* ---------- STAFF / LOGIN / ADMIN ---------- */
 .staff-section{
   display:none;
   background:var(--pool-deep);
@@ -312,11 +313,43 @@ a{color:inherit;}
   padding:40px 0 70px;
 }
 .staff-inner{max-width:480px;margin:0 auto;text-align:center;}
+.staff-inner.wide{max-width:920px;}
 .staff-inner h2{color:var(--white);font-size:28px;}
 .staff-inner p.sub{color:rgba(255,255,255,0.65);font-size:13.5px;margin-top:8px;}
 .exit-staff{
   display:inline-block;margin-bottom:24px;color:rgba(255,255,255,0.6);font-size:13px;text-decoration:none;
 }
+
+/* Login card */
+.login-card{
+  background:var(--white);
+  border-radius:22px;
+  padding:28px 26px;
+  text-align:left;
+  box-shadow:var(--shadow);
+  max-width:380px;
+  margin:24px auto 0;
+}
+.login-card h3{
+  font-size:20px;color:var(--pool-deep);margin-bottom:6px;
+}
+.login-card .hint{font-size:13px;color:#678;margin-bottom:18px;}
+.login-msg{font-size:13px;color:#c0392b;min-height:18px;margin-top:8px;}
+
+/* Staff tabs */
+.staff-tabs{
+  display:flex;gap:8px;justify-content:center;margin:18px 0 22px;flex-wrap:wrap;
+}
+.staff-tab{
+  padding:10px 18px;border-radius:20px;font-weight:700;font-size:13px;
+  background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);
+}
+.staff-tab.active{
+  background:var(--aqua);color:var(--pool-deep);
+}
+.staff-panel{display:none;text-align:left;}
+.staff-panel.active{display:block;}
+
 .scan-frame{
   width:280px;height:280px;border-radius:50%;
   margin:30px auto;position:relative;
@@ -347,6 +380,72 @@ a{color:inherit;}
 }
 .stat-pill .n{font-family:'Fredoka',sans-serif;font-size:22px;font-weight:700;color:var(--sun);}
 .stat-pill .l{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:2px;}
+
+/* Admin panel cards */
+.admin-card{
+  background:var(--white);
+  border-radius:18px;
+  padding:22px 22px;
+  margin-bottom:18px;
+  box-shadow:var(--shadow);
+}
+.admin-card h3{font-size:17px;color:var(--pool-deep);margin-bottom:4px;}
+.admin-card .card-sub{font-size:12.5px;color:#678;margin-bottom:16px;}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:560px){.admin-grid{grid-template-columns:1fr;}}
+.admin-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.admin-actions button{padding:12px 18px;border-radius:12px;font-weight:700;font-size:13.5px;}
+.admin-msg{font-size:13px;margin-top:10px;min-height:18px;}
+.admin-msg.ok{color:#127a56;}
+.admin-msg.err{color:#c0392b;}
+
+/* Transactions table */
+.tx-toolbar{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;
+}
+.tx-toolbar input{
+  flex:1;min-width:160px;padding:10px 14px;border-radius:12px;border:1.5px solid #dbeef0;
+  font-family:inherit;font-size:13.5px;background:#f7fdfd;
+}
+.tx-table-wrap{
+  overflow-x:auto;
+  border-radius:14px;
+  border:1px solid #e0eef0;
+}
+table.tx-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+  background:#fff;
+}
+table.tx-table th{
+  text-align:left;padding:12px 14px;background:var(--foam);color:var(--pool-deep);
+  font-size:11px;letter-spacing:0.8px;text-transform:uppercase;font-weight:700;
+  white-space:nowrap;
+}
+table.tx-table td{
+  padding:12px 14px;border-top:1px solid #eef6f7;vertical-align:top;
+}
+table.tx-table tr:hover td{background:#f9fdfd;}
+.badge-status{
+  display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+}
+.badge-status.unused{background:#e3fbf3;color:#127a56;}
+.badge-status.checked-in{background:#fff6de;color:#8a6800;}
+.qr-preview{
+  width:56px;height:56px;border-radius:8px;border:1px dashed #cdeef0;background:#fff;
+  display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.qr-preview canvas, .qr-preview img{width:52px !important;height:52px !important;}
+.tx-empty{text-align:center;padding:32px;color:#89a;font-size:14px;}
+.session-bar{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  color:rgba(255,255,255,0.7);font-size:13px;margin-bottom:8px;flex-wrap:wrap;
+}
+.session-bar strong{color:var(--sun);}
+.logout-btn{
+  background:rgba(255,255,255,0.12);color:#fff;padding:8px 14px;border-radius:16px;font-size:12.5px;font-weight:600;
+}
 
 footer{
   background:var(--pool-deep);color:rgba(255,255,255,0.5);text-align:center;padding:26px;font-size:12.5px;
@@ -513,34 +612,135 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
 
 </div>
 
-<!-- ================= STAFF / SCANNER VIEW ================= -->
+<!-- ================= STAFF / SCANNER / ADMIN VIEW ================= -->
 <div class="staff-section" id="staffSection">
-  <div class="container staff-inner">
+  <div class="container staff-inner wide" id="staffContainer">
+
     <a href="#" id="exitStaffLink" class="exit-staff">← Back to event page</a>
-    <h2>🚪 Gate Check-In</h2>
-    <p class="sub">Point the camera at a guest's ticket QR to verify and check them in.</p>
 
-    <div class="scan-frame" id="scanFrame">
-      <div class="placeholder" id="scanPlaceholder">Camera preview will appear here</div>
-      <video id="scanVideo" playsinline style="display:none;"></video>
+    <!-- LOGIN -->
+    <div id="loginPanel">
+      <h2>🔐 Staff Login</h2>
+      <p class="sub">Sign in to access gate check-in and the admin tools.</p>
+      <div class="login-card">
+        <h3>Welcome back</h3>
+        <p class="hint">Use the staff or admin credentials set in your environment variables.</p>
+        <form id="loginForm">
+          <div class="field">
+            <label>Username / Name</label>
+            <input type="text" id="loginUser" autocomplete="username" required placeholder="staff or admin">
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="loginPass" autocomplete="current-password" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="buy-btn" id="loginBtn">Sign in</button>
+          <div class="login-msg" id="loginMsg"></div>
+        </form>
+      </div>
     </div>
-    <canvas id="scanCanvas" style="display:none;"></canvas>
 
-    <div class="scan-controls">
-      <button class="btn btn-primary" id="startScanBtn">▶ Start scanning</button>
-      <button class="btn btn-ghost" id="stopScanBtn" style="display:none;">⏹ Stop</button>
+    <!-- AUTHENTICATED AREA -->
+    <div id="authArea" class="hidden">
+      <div class="session-bar">
+        <div>Signed in as <strong id="sessionName">—</strong> · <span id="sessionRole">—</span></div>
+        <button type="button" class="logout-btn" id="logoutBtn">Log out</button>
+      </div>
+
+      <div class="staff-tabs" id="staffTabs">
+        <button type="button" class="staff-tab active" data-panel="scanPanel">🚪 Check-In</button>
+        <button type="button" class="staff-tab" data-panel="txPanel" id="txTabBtn">📋 Transactions</button>
+        <button type="button" class="staff-tab hidden" data-panel="adminPanel" id="adminTabBtn">⚙️ Prices</button>
+      </div>
+
+      <!-- SCANNER PANEL -->
+      <div class="staff-panel active" id="scanPanel" style="text-align:center;">
+        <h2 style="color:#fff;">🚪 Gate Check-In</h2>
+        <p class="sub">Point the camera at a guest's ticket QR to verify and check them in.</p>
+
+        <div class="scan-frame" id="scanFrame">
+          <div class="placeholder" id="scanPlaceholder">Camera preview will appear here</div>
+          <video id="scanVideo" playsinline style="display:none;"></video>
+        </div>
+        <canvas id="scanCanvas" style="display:none;"></canvas>
+
+        <div class="scan-controls">
+          <button class="btn btn-primary" id="startScanBtn">▶ Start scanning</button>
+          <button class="btn btn-ghost" id="stopScanBtn" style="display:none;">⏹ Stop</button>
+        </div>
+
+        <div class="result-banner" id="resultBanner">
+          <div class="rb-title" id="rbTitle">—</div>
+          <div class="rb-detail" id="rbDetail">—</div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-pill"><div class="n" id="statSold">0</div><div class="l">Sold</div></div>
+          <div class="stat-pill"><div class="n" id="statCheckedIn">0</div><div class="l">Checked in</div></div>
+          <div class="stat-pill"><div class="n" id="statRevenue">—</div><div class="l">Revenue</div></div>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS PANEL -->
+      <div class="staff-panel" id="txPanel">
+        <div class="admin-card">
+          <h3>Successful transactions &amp; QR codes</h3>
+          <p class="card-sub">Every paid ticket, its Paystack reference, and the QR payload used at the gate.</p>
+          <div class="tx-toolbar">
+            <input type="search" id="txSearch" placeholder="Search name, email, ticket ID, reference…">
+            <button type="button" class="btn btn-secondary" id="txRefreshBtn" style="padding:10px 16px;border-radius:12px;font-size:13px;">↻ Refresh</button>
+          </div>
+          <div class="tx-table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>QR</th>
+                  <th>Ticket</th>
+                  <th>Buyer</th>
+                  <th>Qty</th>
+                  <th>Paid</th>
+                  <th>Status</th>
+                  <th>Purchased</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
+              <tbody id="txBody">
+                <tr><td colspan="8" class="tx-empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN PRICES PANEL -->
+      <div class="staff-panel" id="adminPanel">
+        <div class="admin-card">
+          <h3>Ticket pricing</h3>
+          <p class="card-sub">Changes apply immediately to the public ticket page (no redeploy needed).</p>
+          <form id="priceForm">
+            <div class="admin-grid">
+              <div class="field">
+                <label>Early bird price (₦)</label>
+                <input type="number" id="adminEarlyPrice" min="0" step="100" required>
+              </div>
+              <div class="field">
+                <label>Door / event-day price (₦)</label>
+                <input type="number" id="adminDoorPrice" min="0" step="100" required>
+              </div>
+              <div class="field" style="grid-column:1 / -1;">
+                <label>Event date &amp; time (ISO)</label>
+                <input type="datetime-local" id="adminEventDate" required>
+              </div>
+            </div>
+            <div class="admin-actions">
+              <button type="submit" class="btn btn-primary" id="savePricesBtn" style="border-radius:12px;">Save prices</button>
+            </div>
+            <div class="admin-msg" id="adminMsg"></div>
+          </form>
+        </div>
+      </div>
     </div>
 
-    <div class="result-banner" id="resultBanner">
-      <div class="rb-title" id="rbTitle">—</div>
-      <div class="rb-detail" id="rbDetail">—</div>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-pill"><div class="n" id="statSold">0</div><div class="l">Sold</div></div>
-      <div class="stat-pill"><div class="n" id="statCheckedIn">0</div><div class="l">Checked in</div></div>
-      <div class="stat-pill"><div class="n" id="statRevenue">—</div><div class="l">Revenue</div></div>
-    </div>
   </div>
 </div>
 
@@ -550,33 +750,42 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
 
 <script>
 /* ============================================================
-   CONFIG — edit these once the real details are locked in
+   CONFIG — defaults; live values are loaded from /api/config
    ============================================================ */
 const CONFIG = {
   eventName: "AquaFest",
   brandWordmark: "HOH",
-
-  // TODO: date is not decided yet — placeholder below. Update this
-  // the moment it's confirmed; everything else (countdown, "door
-  // price" cutover) reacts to it automatically.
   eventDateISO: "2026-11-30T14:00:00",
-
   currencySymbol: "₦",
-  earlyPrice: 5000,   // price while eventDateISO is still in the future
-  doorPrice: 8000,    // price once it becomes the event day (TODO: confirm both amounts)
-
-  // Your Paystack PUBLIC key (starts with pk_test_ or pk_live_). This is
-  // safe to keep in front-end code — it's not the secret key. The secret
-  // key lives only in Vercel's environment variables (see /api and README).
+  earlyPrice: 5000,
+  doorPrice: 8000,
   paystackPublicKey: "pk_test_REPLACE_ME"
 };
 
 /* ============================================================
-   All ticket storage, Paystack verification, and email sending
-   happen server-side in /api — see api/create-ticket.js,
-   api/checkin.js, and api/stats.js. This file only ever talks to
-   those endpoints, never to a database or secret key directly.
+   AUTH STATE
    ============================================================ */
+const AUTH_KEY = 'aquafest_auth';
+let auth = null; // { token, role, name }
+
+function loadAuth(){
+  try{
+    const raw = sessionStorage.getItem(AUTH_KEY);
+    if(raw) auth = JSON.parse(raw);
+  }catch(e){ auth = null; }
+}
+function saveAuth(data){
+  auth = data;
+  if(data) sessionStorage.setItem(AUTH_KEY, JSON.stringify(data));
+  else sessionStorage.removeItem(AUTH_KEY);
+}
+function authHeaders(){
+  if(!auth || !auth.token) return { 'Content-Type': 'application/json' };
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + auth.token
+  };
+}
 
 /* ============================================================
    PRICE / DATE LOGIC
@@ -592,6 +801,20 @@ function currentUnitPrice(){
 }
 function fmtMoney(n){
   return CONFIG.currencySymbol + Number(n).toLocaleString();
+}
+
+async function fetchConfig(){
+  try{
+    const res = await fetch('/api/config');
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.earlyPrice != null) CONFIG.earlyPrice = Number(data.earlyPrice);
+    if(data.doorPrice != null) CONFIG.doorPrice = Number(data.doorPrice);
+    if(data.eventDateISO) CONFIG.eventDateISO = data.eventDateISO;
+    if(data.currencySymbol) CONFIG.currencySymbol = data.currencySymbol;
+    renderPrice();
+    tickCountdown();
+  }catch(e){ /* keep defaults */ }
 }
 
 /* ============================================================
@@ -625,8 +848,6 @@ tickCountdown();
 
 /* ============================================================
    QUANTITY + TOTAL
-   (declared before PRICE DISPLAY below, since renderPrice() calls
-   updateTotal() immediately — qty must exist before that runs)
    ============================================================ */
 let qty = 1;
 function updateTotal(){
@@ -654,6 +875,7 @@ function renderPrice(){
 }
 renderPrice();
 setInterval(renderPrice, 60*1000);
+fetchConfig();
 
 /* ============================================================
    PURCHASE FLOW
@@ -686,14 +908,6 @@ document.getElementById('purchaseForm').addEventListener('submit', async (e)=>{
   }
 });
 
-/*
-  initiatePayment() — LIVE Paystack inline checkout.
-  Opens the Paystack popup; once the buyer pays, Paystack calls
-  back with a transaction reference. We never trust that reference
-  on its own — finalizeTicket() sends it to our own backend, which
-  re-verifies it directly with Paystack using the secret key before
-  creating a ticket or sending anything.
-*/
 function initiatePayment(buyer){
   return new Promise((resolve, reject) => {
     if(!window.PaystackPop){
@@ -703,7 +917,7 @@ function initiatePayment(buyer){
     const handler = PaystackPop.setup({
       key: CONFIG.paystackPublicKey,
       email: buyer.email,
-      amount: Math.round(buyer.unitPrice * buyer.qty * 100), // Paystack expects kobo
+      amount: Math.round(buyer.unitPrice * buyer.qty * 100),
       currency: "NGN",
       metadata: { name: buyer.name, qty: buyer.qty },
       callback: function(response){
@@ -717,12 +931,6 @@ function initiatePayment(buyer){
   });
 }
 
-/*
-  finalizeTicket() — hands the Paystack reference to our backend.
-  The backend (api/create-ticket.js) verifies the payment, creates
-  the ticket record, emails the QR pass, and returns the saved
-  ticket, which we then render as the wristband below.
-*/
 async function finalizeTicket(buyer, reference){
   const res = await fetch('/api/create-ticket', {
     method: 'POST',
@@ -784,14 +992,45 @@ document.getElementById('wbDownloadBtn').addEventListener('click', ()=>{
 });
 
 /* ============================================================
-   NAV: PUBLIC <-> STAFF VIEW TOGGLE
+   NAV: PUBLIC <-> STAFF VIEW
    ============================================================ */
-document.getElementById('staffNavLink').addEventListener('click', (e)=>{
-  e.preventDefault();
+function showStaffView(){
   document.getElementById('publicSite').style.display = 'none';
   document.getElementById('staffSection').style.display = 'block';
-  refreshStats();
   window.scrollTo(0,0);
+  loadAuth();
+  if(auth && auth.token){
+    showAuthArea();
+  } else {
+    showLoginPanel();
+  }
+}
+function showLoginPanel(){
+  document.getElementById('loginPanel').classList.remove('hidden');
+  document.getElementById('authArea').classList.add('hidden');
+}
+function showAuthArea(){
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('authArea').classList.remove('hidden');
+  document.getElementById('sessionName').textContent = auth.name || '—';
+  document.getElementById('sessionRole').textContent = (auth.role || '').toUpperCase();
+  // Admin tab only for admin role
+  const adminTab = document.getElementById('adminTabBtn');
+  if(auth.role === 'admin'){
+    adminTab.classList.remove('hidden');
+  } else {
+    adminTab.classList.add('hidden');
+    // if currently on admin panel, switch to scan
+    switchPanel('scanPanel');
+  }
+  refreshStats();
+  loadTickets();
+  populateAdminForm();
+}
+
+document.getElementById('staffNavLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  showStaffView();
 });
 document.getElementById('exitStaffLink').addEventListener('click', (e)=>{
   e.preventDefault();
@@ -802,6 +1041,65 @@ document.getElementById('exitStaffLink').addEventListener('click', (e)=>{
 });
 
 /* ============================================================
+   LOGIN / LOGOUT
+   ============================================================ */
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('loginBtn');
+  msg.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try{
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){
+      msg.textContent = data.error || 'Invalid credentials';
+      return;
+    }
+    saveAuth({ token: data.token, role: data.role, name: data.name });
+    document.getElementById('loginPass').value = '';
+    showAuthArea();
+  }catch(err){
+    msg.textContent = 'Could not reach the server. Try again.';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  stopScanning();
+  saveAuth(null);
+  showLoginPanel();
+});
+
+/* ============================================================
+   STAFF TABS
+   ============================================================ */
+function switchPanel(panelId){
+  document.querySelectorAll('.staff-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.panel === panelId);
+  });
+  document.querySelectorAll('.staff-panel').forEach(p=>{
+    p.classList.toggle('active', p.id === panelId);
+  });
+  if(panelId !== 'scanPanel') stopScanning();
+  if(panelId === 'txPanel') loadTickets();
+  if(panelId === 'adminPanel') populateAdminForm();
+}
+document.querySelectorAll('.staff-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=> switchPanel(tab.dataset.panel));
+});
+
+/* ============================================================
    SCANNER
    ============================================================ */
 let scanStream = null;
@@ -809,6 +1107,10 @@ let scanning = false;
 let scanRAF = null;
 
 async function startScanning(){
+  if(!auth || !auth.token){
+    showLoginPanel();
+    return;
+  }
   const video = document.getElementById('scanVideo');
   const placeholder = document.getElementById('scanPlaceholder');
   try{
@@ -875,7 +1177,7 @@ async function handleScannedPayload(raw){
   try{
     res = await fetch('/api/checkin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ id: raw })
     });
     data = await res.json();
@@ -883,6 +1185,15 @@ async function handleScannedPayload(raw){
     banner.className = 'result-banner bad';
     title.textContent = '✕ Scan failed';
     detail.textContent = 'Could not reach the server — check your connection and try again.';
+    return;
+  }
+
+  if(res.status === 401){
+    banner.className = 'result-banner bad';
+    title.textContent = '✕ Session expired';
+    detail.textContent = 'Please log in again.';
+    saveAuth(null);
+    showLoginPanel();
     return;
   }
 
@@ -904,23 +1215,161 @@ async function handleScannedPayload(raw){
   title.textContent = '✓ Access granted';
   detail.textContent = data.ticket.name + ' — ' + data.ticket.qty + ' ticket(s) — welcome to AquaFest!';
   refreshStats();
+  loadTickets();
 }
 
 async function refreshStats(){
+  if(!auth || !auth.token) return;
   try{
-    const res = await fetch('/api/stats');
+    const res = await fetch('/api/stats', { headers: authHeaders() });
+    if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
     const data = await res.json();
     document.getElementById('statSold').textContent = data.sold;
     document.getElementById('statCheckedIn').textContent = data.checkedIn;
     document.getElementById('statRevenue').textContent = fmtMoney(data.revenue);
+  }catch(e){ /* leave last-known */ }
+}
+
+/* ============================================================
+   TRANSACTIONS LIST
+   ============================================================ */
+let allTickets = [];
+
+async function loadTickets(){
+  if(!auth || !auth.token) return;
+  const body = document.getElementById('txBody');
+  try{
+    const res = await fetch('/api/tickets', { headers: authHeaders() });
+    if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
+    if(!res.ok){
+      body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
+      return;
+    }
+    const data = await res.json();
+    allTickets = data.tickets || [];
+    renderTickets(allTickets);
   }catch(e){
-    // leave last-known stats on screen rather than clearing them
+    body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
   }
 }
-</script>
-<script type="module">
-  import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics@1/dist/index.mjs';
-  inject();
+
+function renderTickets(list){
+  const body = document.getElementById('txBody');
+  if(!list.length){
+    body.innerHTML = '<tr><td colspan="8" class="tx-empty">No tickets sold yet</td></tr>';
+    return;
+  }
+  body.innerHTML = '';
+  list.forEach((t, i)=>{
+    const tr = document.createElement('tr');
+    const statusClass = t.status === 'checked-in' ? 'checked-in' : 'unused';
+    const statusLabel = t.status === 'checked-in' ? 'Checked in' : 'Unused';
+    const when = t.purchasedAt ? new Date(t.purchasedAt).toLocaleString() : '—';
+    tr.innerHTML = `
+      <td><div class="qr-preview" id="txqr-${i}"></div></td>
+      <td class="mono">${escapeHtml(t.id)}</td>
+      <td><strong>${escapeHtml(t.name)}</strong><br><span style="color:#789;font-size:12px;">${escapeHtml(t.email)}</span></td>
+      <td>${t.qty}</td>
+      <td>${fmtMoney(t.amountPaid)}</td>
+      <td><span class="badge-status ${statusClass}">${statusLabel}</span></td>
+      <td style="white-space:nowrap;font-size:12px;">${escapeHtml(when)}</td>
+      <td class="mono" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.reference || '')}</td>
+    `;
+    body.appendChild(tr);
+    // Render mini QR
+    try{
+      const holder = document.getElementById('txqr-' + i);
+      if(holder && t.qrPayload){
+        new QRCode(holder, { text: t.qrPayload, width: 52, height: 52, colorDark: "#063a52", colorLight: "#ffffff" });
+      }
+    }catch(e){}
+  });
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('txSearch').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(!q){ renderTickets(allTickets); return; }
+  const filtered = allTickets.filter(t =>
+    (t.id||'').toLowerCase().includes(q) ||
+    (t.name||'').toLowerCase().includes(q) ||
+    (t.email||'').toLowerCase().includes(q) ||
+    (t.reference||'').toLowerCase().includes(q)
+  );
+  renderTickets(filtered);
+});
+document.getElementById('txRefreshBtn').addEventListener('click', loadTickets);
+
+/* ============================================================
+   ADMIN: PRICE FORM
+   ============================================================ */
+function toDatetimeLocal(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  // datetime-local wants local time without Z
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+function populateAdminForm(){
+  document.getElementById('adminEarlyPrice').value = CONFIG.earlyPrice;
+  document.getElementById('adminDoorPrice').value = CONFIG.doorPrice;
+  document.getElementById('adminEventDate').value = toDatetimeLocal(CONFIG.eventDateISO);
+  document.getElementById('adminMsg').textContent = '';
+  document.getElementById('adminMsg').className = 'admin-msg';
+}
+
+document.getElementById('priceForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!auth || auth.role !== 'admin'){
+    document.getElementById('adminMsg').textContent = 'Admin access required';
+    document.getElementById('adminMsg').className = 'admin-msg err';
+    return;
+  }
+  const msg = document.getElementById('adminMsg');
+  const btn = document.getElementById('savePricesBtn');
+  msg.textContent = '';
+  msg.className = 'admin-msg';
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const earlyPrice = Number(document.getElementById('adminEarlyPrice').value);
+  const doorPrice = Number(document.getElementById('adminDoorPrice').value);
+  const local = document.getElementById('adminEventDate').value;
+  // Convert datetime-local back to ISO
+  const eventDateISO = local ? new Date(local).toISOString() : CONFIG.eventDateISO;
+
+  try{
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ earlyPrice, doorPrice, eventDateISO })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){
+      msg.textContent = data.error || 'Could not save';
+      msg.className = 'admin-msg err';
+      return;
+    }
+    CONFIG.earlyPrice = data.earlyPrice;
+    CONFIG.doorPrice = data.doorPrice;
+    CONFIG.eventDateISO = data.eventDateISO;
+    renderPrice();
+    tickCountdown();
+    msg.textContent = 'Prices updated — public page will show the new amounts.';
+    msg.className = 'admin-msg ok';
+  }catch(err){
+    msg.textContent = 'Network error — try again.';
+    msg.className = 'admin-msg err';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Save prices';
+  }
+});
 </script>
 </body>
 </html>

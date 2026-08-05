@@ -1,10 +1,21 @@
 // GET /api/stats
 // Returns aggregate numbers for the gate-staff dashboard.
+// Requires staff or admin Bearer token.
 
 const { kv } = require('@vercel/kv');
+const { verifyToken } = require('./auth');
 
 module.exports = async (req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
+    const session = await verifyToken(req);
+    if (!session || (session.role !== 'staff' && session.role !== 'admin')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const ids = (await kv.smembers('ticket-index')) || [];
     let sold = 0;
     let checkedIn = 0;

@@ -3,12 +3,14 @@
 //
 // 1. Re-verifies the Paystack transaction server-side (never trust a
 //    reference the browser hands you without checking it against Paystack).
-// 2. Creates the ticket record in Vercel KV.
-// 3. Emails the buyer their QR gate pass (best-effort — a failed email
+// 2. Computes expected price from server-side config (not client unitPrice).
+// 3. Creates the ticket record in Vercel KV.
+// 4. Emails the buyer their QR gate pass (best-effort — a failed email
 //    does not fail the ticket purchase, since the buyer already paid).
 
 const { kv } = require('@vercel/kv');
 const QRCode = require('qrcode');
+const { loadConfig } = require('./config');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -18,7 +20,7 @@ module.exports = async (req, res) => {
   try {
     const { reference, name, email, qty, unitPrice } = req.body || {};
 
-    if (!reference || !name || !email || !qty || !unitPrice) {
+    if (!reference || !name || !email || !qty) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -33,26 +35,45 @@ module.exports = async (req, res) => {
       return res.status(402).json({ error: 'Payment could not be verified with Paystack' });
     }
 
-    const expectedKobo = Math.round(Number(unitPrice) * Number(qty) * 100);
-    if (verifyData.data.amount < expectedKobo) {
+    // ---- 2. Server-side price (don't fully trust client unitPrice) ----
+    const config = await loadConfig();
+    const now = new Date();
+    const ev = new Date(config.eventDateISO);
+    const isDoor =
+      (now.getFullYear() === ev.getFullYear() &&
+        now.getMonth() === ev.getMonth() &&
+        now.getDate() === ev.getDate()) ||
+      now > ev;
+    const serverUnit = isDoor ? Number(config.doorPrice) : Number(config.earlyPrice);
+    // Allow a small tolerance if client sent a slightly different price (race on day-of)
+    // but never charge less than the lower of the two published prices.
+    const minAcceptable = Math.min(Number(config.earlyPrice), Number(config.doorPrice));
+    const expectedKobo = Math.round(serverUnit * Number(qty) * 100);
+    const paid = Number(verifyData.data.amount);
+
+    if (paid < Math.round(minAcceptable * Number(qty) * 100)) {
       return res.status(402).json({ error: 'Amount paid does not match the ticket total' });
     }
 
-    // ---- 2. Idempotency: if this reference already produced a ticket, return it ----
+    // Prefer what was actually paid for the ticket record
+    const amountPaid = paid / 100;
+
+    // ---- 3. Idempotency: if this reference already produced a ticket, return it ----
     const existingId = await kv.get(`ref:${reference}`);
     if (existingId) {
       const existing = await kv.get(`ticket:${existingId}`);
       if (existing) return res.status(200).json({ ticket: existing });
     }
 
-    // ---- 3. Create and store the ticket ----
+    // ---- 4. Create and store the ticket ----
     const id = 'AQF-' + Math.random().toString(36).slice(2, 8).toUpperCase();
     const ticket = {
       id,
       name,
       email,
       qty: Number(qty),
-      amountPaid: Number(unitPrice) * Number(qty),
+      amountPaid,
+      unitPrice: serverUnit,
       status: 'unused', // unused | checked-in
       purchasedAt: new Date().toISOString(),
       reference
@@ -62,7 +83,7 @@ module.exports = async (req, res) => {
     await kv.sadd('ticket-index', id);
     await kv.set(`ref:${reference}`, id);
 
-    // ---- 4. Email the QR pass (best-effort) ----
+    // ---- 5. Email the QR pass (best-effort) ----
     try {
       await sendTicketEmail(ticket);
     } catch (emailErr) {
@@ -112,4 +133,4 @@ async function sendTicketEmail(ticket) {
     const body = await emailRes.text();
     throw new Error(`Resend API error: ${emailRes.status} ${body}`);
   }
-}
+};

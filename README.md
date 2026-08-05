@@ -1,30 +1,34 @@
 # AquaFest Ticketing
 
 A pool-party-themed ticketing site for AquaFest (by HOH): countdown, Paystack
-checkout, emailed QR gate passes, and a camera-based scanner for check-in.
+checkout, emailed QR gate passes, and a camera-based scanner for check-in —
+plus staff login, an admin price panel, and a full transactions / QR ledger.
 
 ```
 aquafest-ticketing/
-├── index.html          ← the whole front end (countdown, purchase, wristband, scanner)
+├── index.html              ← front end (countdown, purchase, wristband, staff UI)
 ├── package.json
-├── .env.example         ← copy to .env.local for local dev
+├── .env.example
 ├── .gitignore
 └── api/
-    ├── create-ticket.js ← verifies Paystack payment, saves ticket, emails QR
-    ├── checkin.js        ← called by the scanner to validate + mark a ticket used
-    └── stats.js          ← sold / checked-in / revenue counters for staff
+    ├── auth.js             ← staff/admin login → Bearer token (KV session)
+    ├── config.js           ← public GET prices; admin POST to change them
+    ├── create-ticket.js    ← verifies Paystack, saves ticket, emails QR
+    ├── checkin.js          ← scanner validates + marks ticket used (auth required)
+    ├── stats.js            ← sold / checked-in / revenue (auth required)
+    └── tickets.js          ← full transaction + QR list (auth required)
 ```
 
 ## 1. Before you touch any code
 
-Fill in these three things — they're the only genuinely open questions:
+Fill in these:
 
-- **Event date** — `index.html`, near the top of the `<script>` block, in
-  `CONFIG.eventDateISO`. Everything (countdown, the door-price cutover)
-  reacts to this automatically.
-- **Prices** — `CONFIG.earlyPrice` and `CONFIG.doorPrice` in the same block.
-- **Paystack public key** — `CONFIG.paystackPublicKey`, also in the same
-  block. This is the *public* key (starts `pk_`) — safe to commit.
+- **Event date & prices** — either edit the defaults in `index.html` (`CONFIG`)
+  or, after deploy, change them live from the **Admin → Prices** panel
+  (stored in Vercel KV under `config:event`).
+- **Paystack public key** — `CONFIG.paystackPublicKey` in `index.html`
+  (starts with `pk_`). Safe to commit.
+- **Staff / admin passwords** — set in environment variables (see below).
 
 ## 2. Install dependencies
 
@@ -32,72 +36,67 @@ Fill in these three things — they're the only genuinely open questions:
 npm install
 ```
 
-## 3. Set up Vercel KV (where tickets are stored)
-
-Serverless functions have no persistent disk, so tickets live in
-[Vercel KV](https://vercel.com/docs/storage/vercel-kv) (a hosted Redis).
+## 3. Set up Vercel KV
 
 1. In the Vercel dashboard: **Storage → Create Database → KV**.
 2. Connect it to this project.
-3. Vercel will auto-inject `KV_REST_API_URL`, `KV_REST_API_TOKEN`, etc. as
-   environment variables — you don't set these by hand.
+3. Vercel auto-injects `KV_REST_API_URL`, `KV_REST_API_TOKEN`, etc.
 
-## 4. Set the remaining environment variables
+## 4. Environment variables
 
-In **Project → Settings → Environment Variables** on Vercel (see
-`.env.example` for the full list with comments):
+In **Project → Settings → Environment Variables** (see `.env.example`):
 
-| Variable | Where it comes from |
+| Variable | Purpose |
 |---|---|
-| `PAYSTACK_SECRET_KEY` | Paystack dashboard → API Keys (starts `sk_`) |
-| `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys |
-| `RESEND_FROM_EMAIL` | e.g. `AquaFest <tickets@yourdomain.com>` — needs a verified sending domain in Resend (or use their test address while developing) |
+| `PAYSTACK_SECRET_KEY` | Paystack secret (`sk_…`) |
+| `RESEND_API_KEY` | Resend API key |
+| `RESEND_FROM_EMAIL` | e.g. `AquaFest <tickets@yourdomain.com>` |
+| `STAFF_USERNAME` | Gate staff login name (default `staff`) |
+| `STAFF_PASSWORD` | Gate staff password |
+| `ADMIN_USERNAME` | Admin login name (default `admin`) |
+| `ADMIN_PASSWORD` | Admin password (can change prices) |
 
-For local development, run `vercel env pull .env.local` after step 3 to pull
-the KV variables down, then add the Paystack/Resend ones to that same file.
+For local dev: `vercel env pull .env.local`, then add the values above.
 
-## 5. Run it locally
+## 5. Run locally
 
 ```bash
-npm i -g vercel   # if you don't have it
+npm i -g vercel   # if needed
 vercel dev
 ```
-
-This serves `index.html` and runs the `/api` functions together, so the
-whole flow — buy a ticket, get emailed a QR, scan it in — works exactly as
-it will in production.
 
 ## 6. Deploy
 
 ```bash
-vercel        # first deploy, follow the prompts to link the project
-vercel --prod # promote to production
+vercel
+vercel --prod
 ```
 
-Or connect the GitHub repo to a Vercel project in the dashboard for
-auto-deploys on every push.
+Or connect the GitHub repo for auto-deploys.
 
 ## How the pieces fit together
 
-1. Buyer fills the form → **Paystack inline popup** opens in the browser
-   using the public key.
-2. On successful payment, Paystack hands back a `reference`. The front end
-   sends that to `POST /api/create-ticket`.
-3. `create-ticket.js` **re-verifies the reference directly with Paystack**
-   (never trusts the browser alone), then saves the ticket in KV and emails
-   the QR pass via Resend.
-4. The buyer's browser renders the same ticket as an on-screen wristband
-   with a QR code (using the `id`/`name` payload).
-5. At the gate, staff open the "Gate Staff" view, scan the QR with the
-   camera, and the browser calls `POST /api/checkin`, which looks the
-   ticket up in KV and marks it used — so a ticket can't be scanned in
-   twice, even from two different phones.
+1. Buyer fills the form → **Paystack inline popup** (public key).
+2. On success, front end sends the reference to `POST /api/create-ticket`.
+3. Backend **re-verifies with Paystack**, loads the current price from KV
+   (`config:event`), stores the ticket, and emails the QR via Resend.
+4. Buyer sees an on-screen wristband with the same QR.
+5. Gate staff open **Gate Staff →**, log in with name + password, then scan.
+6. Scanner calls `POST /api/checkin` with a Bearer token; ticket is marked used.
+7. **Admin** role also gets a **Prices** tab (edit early/door price & event
+   date live) and both roles can open **Transactions** to see every sale
+   and its QR code.
 
-## Known limits worth knowing about
+## Auth model
 
-- Ticket price increases are based on the visitor's **local clock** — fine
-  for a prototype, but for a hard cutover you'd want the price decided
-  server-side too (have `create-ticket.js` compute the expected amount
-  itself rather than trusting `unitPrice` from the client).
-- Resend needs a verified sending domain before it'll deliver to arbitrary
-  inboxes — their docs walk through DNS setup in a few minutes.
+- `POST /api/auth` with `{ username, password }` returns `{ token, role, name }`.
+- Token is a random string stored in KV (`auth:<token>`) for 12 hours.
+- Front end keeps it in `sessionStorage` and sends `Authorization: Bearer …`
+  on check-in, stats, tickets, and admin config routes.
+- Roles: `staff` (scanner + transactions), `admin` (same + price editor).
+
+## Known limits
+
+- Resend needs a verified sending domain for production delivery.
+- Token is session-scoped (browser tab / sessionStorage); closing the tab
+  requires logging in again — fine for gate devices.
