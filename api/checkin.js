@@ -1,14 +1,8 @@
 // POST /api/checkin
-// Body: { id }  — id can be a plain ticket id, or the raw QR payload
-// (a JSON string like {"id":"AQF-ABC123","name":"..."}) — both are accepted.
+// Body: { id } — plain ticket id or raw QR JSON payload
 // Requires staff or admin Bearer token.
-//
-// Returns:
-//   { result: 'invalid' }                        — 404, no such ticket
-//   { result: 'already-used', ticket }            — 200, previously checked in
-//   { result: 'ok', ticket }                      — 200, checked in just now
 
-const { kv } = require('@vercel/kv');
+const { getRedis } = require('./_redis');
 const { verifyToken } = require('./auth');
 
 module.exports = async (req, res) => {
@@ -32,25 +26,31 @@ module.exports = async (req, res) => {
       const parsed = JSON.parse(rawId);
       if (parsed && parsed.id) id = parsed.id;
     } catch (e) {
-      // rawId was already a plain ticket id string — use as-is
+      // already a plain id
     }
 
-    const ticket = await kv.get(`ticket:${id}`);
+    const redis = getRedis();
+    const ticket = await redis.get(`ticket:${id}`);
     if (!ticket) {
       return res.status(404).json({ result: 'invalid' });
     }
 
-    if (ticket.status === 'checked-in') {
-      return res.status(200).json({ result: 'already-used', ticket });
+    const t = typeof ticket === 'string' ? JSON.parse(ticket) : ticket;
+
+    if (t.status === 'checked-in') {
+      return res.status(200).json({ result: 'already-used', ticket: t });
     }
 
-    ticket.status = 'checked-in';
-    ticket.checkedInAt = new Date().toISOString();
-    await kv.set(`ticket:${id}`, ticket);
+    t.status = 'checked-in';
+    t.checkedInAt = new Date().toISOString();
+    await redis.set(`ticket:${id}`, t);
 
-    return res.status(200).json({ result: 'ok', ticket });
+    return res.status(200).json({ result: 'ok', ticket: t });
   } catch (err) {
     console.error(err);
+    if (err.code === 'REDIS_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Check-in failed' });
   }
 };

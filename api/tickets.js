@@ -1,11 +1,6 @@
-// GET /api/tickets
-// Admin (or staff) only. Returns every ticket on record for the
-// transactions / QR tracking panel.
-//
-// Response: { tickets: [ { id, name, email, qty, amountPaid, status,
-//   purchasedAt, checkedInAt?, reference, qrPayload } ] }
+// GET /api/tickets — full transaction + QR list (auth required)
 
-const { kv } = require('@vercel/kv');
+const { getRedis } = require('./_redis');
 const { verifyToken } = require('./auth');
 
 module.exports = async (req, res) => {
@@ -19,12 +14,14 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const ids = (await kv.smembers('ticket-index')) || [];
+    const redis = getRedis();
+    const ids = (await redis.smembers('ticket-index')) || [];
     const tickets = [];
 
     for (const id of ids) {
-      const t = await kv.get(`ticket:${id}`);
-      if (!t) continue;
+      const raw = await redis.get(`ticket:${id}`);
+      if (!raw) continue;
+      const t = typeof raw === 'string' ? JSON.parse(raw) : raw;
       tickets.push({
         id: t.id,
         name: t.name,
@@ -35,12 +32,10 @@ module.exports = async (req, res) => {
         purchasedAt: t.purchasedAt,
         checkedInAt: t.checkedInAt || null,
         reference: t.reference,
-        // Same payload encoded into the QR on the wristband / email
         qrPayload: JSON.stringify({ id: t.id, name: t.name })
       });
     }
 
-    // Newest first
     tickets.sort((a, b) => {
       const ta = a.purchasedAt ? new Date(a.purchasedAt).getTime() : 0;
       const tb = b.purchasedAt ? new Date(b.purchasedAt).getTime() : 0;
@@ -50,6 +45,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ tickets, count: tickets.length });
   } catch (err) {
     console.error(err);
+    if (err.code === 'REDIS_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Could not load tickets' });
   }
 };

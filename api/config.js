@@ -1,11 +1,7 @@
 // GET  /api/config          — public: current event prices & date
 // POST /api/config          — admin only: update earlyPrice, doorPrice, eventDateISO
-//
-// Prices live in Vercel KV under key "config:event" so the admin panel
-// can change them without redeploying. Falls back to sensible defaults
-// if nothing has been saved yet.
 
-const { kv } = require('@vercel/kv');
+const { getRedis } = require('./_redis');
 const { verifyToken } = require('./auth');
 
 const DEFAULTS = {
@@ -16,8 +12,16 @@ const DEFAULTS = {
 };
 
 async function loadConfig() {
-  const stored = await kv.get('config:event');
-  return { ...DEFAULTS, ...(stored || {}) };
+  try {
+    const redis = getRedis();
+    const stored = await redis.get('config:event');
+    if (!stored) return { ...DEFAULTS };
+    const obj = typeof stored === 'string' ? JSON.parse(stored) : stored;
+    return { ...DEFAULTS, ...obj };
+  } catch (e) {
+    // Redis not configured yet — serve defaults so the public page still works
+    return { ...DEFAULTS };
+  }
 }
 
 module.exports = async (req, res) => {
@@ -35,7 +39,6 @@ module.exports = async (req, res) => {
 
       const body = req.body || {};
       const current = await loadConfig();
-
       const next = { ...current };
 
       if (body.earlyPrice !== undefined) {
@@ -63,14 +66,18 @@ module.exports = async (req, res) => {
         next.currencySymbol = body.currencySymbol.slice(0, 4);
       }
 
-      await kv.set('config:event', next);
+      const redis = getRedis();
+      await redis.set('config:event', next);
       return res.status(200).json(next);
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Could not load or save config' });
+    if (err.code === 'REDIS_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
+    return res.status(500).json({ error: err.message || 'Could not load or save config' });
   }
 };
 

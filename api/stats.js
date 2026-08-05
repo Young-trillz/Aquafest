@@ -1,8 +1,6 @@
-// GET /api/stats
-// Returns aggregate numbers for the gate-staff dashboard.
-// Requires staff or admin Bearer token.
+// GET /api/stats — sold / checked-in / revenue (auth required)
 
-const { kv } = require('@vercel/kv');
+const { getRedis } = require('./_redis');
 const { verifyToken } = require('./auth');
 
 module.exports = async (req, res) => {
@@ -16,14 +14,16 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const ids = (await kv.smembers('ticket-index')) || [];
+    const redis = getRedis();
+    const ids = (await redis.smembers('ticket-index')) || [];
     let sold = 0;
     let checkedIn = 0;
     let revenue = 0;
 
     for (const id of ids) {
-      const t = await kv.get(`ticket:${id}`);
-      if (!t) continue;
+      const raw = await redis.get(`ticket:${id}`);
+      if (!raw) continue;
+      const t = typeof raw === 'string' ? JSON.parse(raw) : raw;
       sold += Number(t.qty) || 0;
       revenue += Number(t.amountPaid) || 0;
       if (t.status === 'checked-in') checkedIn++;
@@ -32,6 +32,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ sold, checkedIn, revenue });
   } catch (err) {
     console.error(err);
+    if (err.code === 'REDIS_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Could not load stats' });
   }
 };

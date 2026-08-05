@@ -1,15 +1,9 @@
 // POST /api/create-ticket
 // Body: { reference, name, email, qty, unitPrice }
-//
-// 1. Re-verifies the Paystack transaction server-side (never trust a
-//    reference the browser hands you without checking it against Paystack).
-// 2. Computes expected price from server-side config (not client unitPrice).
-// 3. Creates the ticket record in Vercel KV.
-// 4. Emails the buyer their QR gate pass (best-effort — a failed email
-//    does not fail the ticket purchase, since the buyer already paid).
+// Verifies Paystack, stores ticket, emails QR.
 
-const { kv } = require('@vercel/kv');
 const QRCode = require('qrcode');
+const { getRedis } = require('./_redis');
 const { loadConfig } = require('./config');
 
 module.exports = async (req, res) => {
@@ -18,13 +12,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { reference, name, email, qty, unitPrice } = req.body || {};
+    const { reference, name, email, qty } = req.body || {};
 
     if (!reference || !name || !email || !qty) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // ---- 1. Verify the transaction with Paystack ----
+    // ---- 1. Verify with Paystack ----
     const verifyRes = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
       { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
@@ -35,7 +29,7 @@ module.exports = async (req, res) => {
       return res.status(402).json({ error: 'Payment could not be verified with Paystack' });
     }
 
-    // ---- 2. Server-side price (don't fully trust client unitPrice) ----
+    // ---- 2. Server-side price ----
     const config = await loadConfig();
     const now = new Date();
     const ev = new Date(config.eventDateISO);
@@ -45,27 +39,28 @@ module.exports = async (req, res) => {
         now.getDate() === ev.getDate()) ||
       now > ev;
     const serverUnit = isDoor ? Number(config.doorPrice) : Number(config.earlyPrice);
-    // Allow a small tolerance if client sent a slightly different price (race on day-of)
-    // but never charge less than the lower of the two published prices.
     const minAcceptable = Math.min(Number(config.earlyPrice), Number(config.doorPrice));
-    const expectedKobo = Math.round(serverUnit * Number(qty) * 100);
     const paid = Number(verifyData.data.amount);
 
     if (paid < Math.round(minAcceptable * Number(qty) * 100)) {
       return res.status(402).json({ error: 'Amount paid does not match the ticket total' });
     }
 
-    // Prefer what was actually paid for the ticket record
     const amountPaid = paid / 100;
 
-    // ---- 3. Idempotency: if this reference already produced a ticket, return it ----
-    const existingId = await kv.get(`ref:${reference}`);
+    const redis = getRedis();
+
+    // ---- 3. Idempotency ----
+    const existingId = await redis.get(`ref:${reference}`);
     if (existingId) {
-      const existing = await kv.get(`ticket:${existingId}`);
-      if (existing) return res.status(200).json({ ticket: existing });
+      const existing = await redis.get(`ticket:${existingId}`);
+      if (existing) {
+        const t = typeof existing === 'string' ? JSON.parse(existing) : existing;
+        return res.status(200).json({ ticket: t });
+      }
     }
 
-    // ---- 4. Create and store the ticket ----
+    // ---- 4. Create ticket ----
     const id = 'AQF-' + Math.random().toString(36).slice(2, 8).toUpperCase();
     const ticket = {
       id,
@@ -74,16 +69,16 @@ module.exports = async (req, res) => {
       qty: Number(qty),
       amountPaid,
       unitPrice: serverUnit,
-      status: 'unused', // unused | checked-in
+      status: 'unused',
       purchasedAt: new Date().toISOString(),
       reference
     };
 
-    await kv.set(`ticket:${id}`, ticket);
-    await kv.sadd('ticket-index', id);
-    await kv.set(`ref:${reference}`, id);
+    await redis.set(`ticket:${id}`, ticket);
+    await redis.sadd('ticket-index', id);
+    await redis.set(`ref:${reference}`, id);
 
-    // ---- 5. Email the QR pass (best-effort) ----
+    // ---- 5. Email (best-effort) ----
     try {
       await sendTicketEmail(ticket);
     } catch (emailErr) {
@@ -93,6 +88,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ticket });
   } catch (err) {
     console.error(err);
+    if (err.code === 'REDIS_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
     return res.status(500).json({ error: 'Something went wrong creating the ticket' });
   }
 };
@@ -123,9 +121,7 @@ async function sendTicketEmail(ticket) {
         <strong>Tickets:</strong> ${ticket.qty}</p>
         <p>Show the attached QR code at the gate — it's your entry pass.</p>
       `,
-      attachments: [
-        { filename: `${ticket.id}.png`, content: qrBase64 }
-      ]
+      attachments: [{ filename: `${ticket.id}.png`, content: qrBase64 }]
     })
   });
 
@@ -133,4 +129,4 @@ async function sendTicketEmail(ticket) {
     const body = await emailRes.text();
     throw new Error(`Resend API error: ${emailRes.status} ${body}`);
   }
-};
+}

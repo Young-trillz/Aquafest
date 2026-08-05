@@ -3,10 +3,10 @@
 // Returns: { token, role, name } on success
 //
 // Roles: "staff" (gate scanner) | "admin" (prices + transactions + scanner)
-// Tokens are stored in KV with a 12-hour TTL.
+// Tokens are stored in Redis with a 12-hour TTL.
 
-const { kv } = require('@vercel/kv');
 const crypto = require('crypto');
+const { getRedis } = require('./_redis');
 
 const TOKEN_TTL_SECONDS = 12 * 60 * 60; // 12 hours
 
@@ -34,8 +34,15 @@ module.exports = async (req, res) => {
     const adminUser = process.env.ADMIN_USERNAME || 'admin';
     const adminPass = process.env.ADMIN_PASSWORD || '';
 
+    if (!staffPass && !adminPass) {
+      return res.status(503).json({
+        error:
+          'Staff/admin passwords are not configured. Set STAFF_PASSWORD and/or ADMIN_PASSWORD in Vercel Environment Variables.'
+      });
+    }
+
     let role = null;
-    let name = username;
+    const name = username;
 
     if (
       timingSafeEqual(username, adminUser) &&
@@ -52,14 +59,17 @@ module.exports = async (req, res) => {
     }
 
     if (!role) {
-      // Avoid leaking whether user or password was wrong
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    if (!staffPass && !adminPass) {
-      return res.status(503).json({
-        error: 'Staff/admin passwords are not configured on the server'
-      });
+    let redis;
+    try {
+      redis = getRedis();
+    } catch (e) {
+      if (e.code === 'REDIS_NOT_CONFIGURED') {
+        return res.status(503).json({ error: e.message });
+      }
+      throw e;
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -70,12 +80,15 @@ module.exports = async (req, res) => {
       exp: Date.now() + TOKEN_TTL_SECONDS * 1000
     };
 
-    await kv.set(`auth:${token}`, session, { ex: TOKEN_TTL_SECONDS });
+    await redis.set(`auth:${token}`, session, { ex: TOKEN_TTL_SECONDS });
 
     return res.status(200).json({ token, role, name });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Login failed' });
+    console.error('auth error:', err);
+    return res.status(500).json({
+      error: err.message || 'Login failed',
+      detail: process.env.NODE_ENV === 'development' ? String(err.stack || err) : undefined
+    });
   }
 };
 
@@ -87,13 +100,22 @@ async function verifyToken(req) {
   const token = match[1].trim();
   if (!token) return null;
 
-  const session = await kv.get(`auth:${token}`);
-  if (!session) return null;
-  if (session.exp && Date.now() > session.exp) {
-    await kv.del(`auth:${token}`);
+  let redis;
+  try {
+    redis = getRedis();
+  } catch (e) {
     return null;
   }
-  return session;
+
+  const session = await redis.get(`auth:${token}`);
+  if (!session) return null;
+  // Upstash may already parse JSON objects
+  const s = typeof session === 'string' ? JSON.parse(session) : session;
+  if (s.exp && Date.now() > s.exp) {
+    await redis.del(`auth:${token}`);
+    return null;
+  }
+  return s;
 }
 
 module.exports.verifyToken = verifyToken;

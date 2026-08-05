@@ -36,11 +36,16 @@ Fill in these:
 npm install
 ```
 
-## 3. Set up Vercel KV
+## 3. Set up Redis (Upstash)
 
-1. In the Vercel dashboard: **Storage → Create Database → KV**.
-2. Connect it to this project.
-3. Vercel auto-injects `KV_REST_API_URL`, `KV_REST_API_TOKEN`, etc.
+Vercel KV is **deprecated**. Use Upstash Redis instead:
+
+1. In the Vercel dashboard: **Storage** or **Integrations → Marketplace → Upstash Redis**.
+2. Create / connect a Redis database to this project.
+3. Vercel injects `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+4. For local dev: `vercel env pull .env.local`
+
+(Legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN` still work if present.)
 
 ## 4. Environment variables
 

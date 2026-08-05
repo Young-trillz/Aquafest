@@ -1061,7 +1061,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok){
-      msg.textContent = data.error || 'Invalid credentials';
+      msg.textContent = data.error || data.message || 'Invalid credentials';
+      msg.style.whiteSpace = 'pre-wrap';
       return;
     }
     saveAuth({ token: data.token, role: data.role, name: data.name });
