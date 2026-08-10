@@ -948,27 +948,47 @@ async function finalizeTicket(buyer, reference){
     throw new Error(err.error || "Payment succeeded but the ticket couldn't be created — contact support with your reference: " + reference);
   }
   const data = await res.json();
-  showWristband(data.ticket);
+  showWristband(data.ticket, data.tickets);
 }
 
 /* ============================================================
    WRISTBAND / QR DISPLAY
    ============================================================ */
-function showWristband(ticket){
+function showWristband(ticket, tickets){
   document.getElementById('ticketCardWrap').style.display = 'none';
   const wrap = document.getElementById('wristbandWrap');
   wrap.style.display = 'block';
 
+  const all = Array.isArray(tickets) && tickets.length ? tickets : [ticket];
   document.getElementById('wbName').textContent = ticket.name;
-  document.getElementById('wbId').textContent = ticket.id;
-  document.getElementById('wbQty').textContent = ticket.qty;
-  document.getElementById('wbPaid').textContent = fmtMoney(ticket.amountPaid);
+  document.getElementById('wbId').textContent = all.length === 1 ? ticket.id : `${all.length} tickets`;
+  document.getElementById('wbQty').textContent = all.length;
+  document.getElementById('wbPaid').textContent = fmtMoney(all.reduce((sum, t) => sum + Number(t.amountPaid || 0), 0));
   document.getElementById('wbEventDate').textContent = new Date(CONFIG.eventDateISO).toLocaleDateString(undefined,{month:'short', day:'numeric'});
 
   const qrHolder = document.getElementById('wbQr');
-  qrHolder.innerHTML = "";
-  const payload = JSON.stringify({ id: ticket.id, name: ticket.name });
-  new QRCode(qrHolder, { text: payload, width: 168, height: 168, colorDark: "#063a52", colorLight: "#ffffff" });
+  qrHolder.innerHTML = '';
+  qrHolder.style.display = 'grid';
+  qrHolder.style.gridTemplateColumns = 'repeat(auto-fit, minmax(190px, 1fr))';
+  qrHolder.style.gap = '16px';
+
+  all.forEach((t) => {
+    const card = document.createElement('div');
+    card.style.textAlign = 'center';
+    card.style.padding = '10px';
+    card.style.border = '1px solid #dbe5ea';
+    card.style.borderRadius = '12px';
+    const label = document.createElement('div');
+    label.textContent = all.length > 1 ? `Ticket ${t.ticketNumber || all.indexOf(t) + 1} of ${all.length}` : t.id;
+    label.style.fontWeight = '700';
+    label.style.marginBottom = '8px';
+    const qr = document.createElement('div');
+    qr.className = 'wristband-qr';
+    card.appendChild(label);
+    card.appendChild(qr);
+    qrHolder.appendChild(card);
+    new QRCode(qr, { text: JSON.stringify({ id: t.id, name: t.name }), width: 168, height: 168, colorDark: '#063a52', colorLight: '#ffffff' });
+  });
 
   wrap.scrollIntoView({behavior:'smooth', block:'center'});
 }
@@ -1214,7 +1234,7 @@ async function handleScannedPayload(raw){
 
   banner.className = 'result-banner ok';
   title.textContent = '✓ Access granted';
-  detail.textContent = data.ticket.name + ' — ' + data.ticket.qty + ' ticket(s) — welcome to AquaFest!';
+  detail.textContent = data.ticket.name + ' — ticket ' + data.ticket.id + ' — welcome to AquaFest!';
   refreshStats();
   loadTickets();
 }
