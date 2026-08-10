@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
       const raw = await redis.get(`ticket:${id}`);
       if (!raw) continue;
       const t = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      sold += Number(t.qty) || 0;
+      sold += 1;
       revenue += Number(t.amountPaid) || 0;
       if (t.status === 'checked-in') checkedIn++;
     }
