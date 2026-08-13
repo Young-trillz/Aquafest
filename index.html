@@ -381,6 +381,22 @@ a{color:inherit;}
 .stat-pill .n{font-family:'Fredoka',sans-serif;font-size:22px;font-weight:700;color:var(--sun);}
 .stat-pill .l{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:2px;}
 
+/* Phase 2 gate operations */
+.gate-status-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;}
+.gate-status{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.78);font-size:12px;font-weight:700;}
+.gate-status.online{color:#b8ffe9;border:1px solid rgba(31,214,196,.35);}
+.gate-status.offline{color:#ffd3d3;border:1px solid rgba(255,107,107,.35);}
+.scanner-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+.stat-pill .n.small{font-size:18px;}
+.history-card{margin-top:22px;text-align:left;}
+.history-list{display:flex;flex-direction:column;gap:8px;}
+.history-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5f0f1;border-radius:12px;background:#fbfefe;}
+.history-main{min-width:0;}
+.history-name{font-weight:800;color:var(--pool-deep);font-size:13px;}
+.history-meta{font-size:11px;color:#789;margin-top:3px;}
+.history-time{font-family:'Space Mono',monospace;font-size:11px;color:#567;white-space:nowrap;}
+@media(max-width:560px){.history-item{align-items:flex-start;}.history-time{white-space:normal;text-align:right;}}
+
 /* Admin panel cards */
 .admin-card{
   background:var(--white);
@@ -667,6 +683,7 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
         <div class="scan-controls">
           <button class="btn btn-primary" id="startScanBtn">▶ Start scanning</button>
           <button class="btn btn-ghost" id="stopScanBtn" style="display:none;">⏹ Stop</button>
+          <button class="btn btn-ghost" id="refreshGateBtn">↻ Refresh stats</button>
         </div>
 
         <div class="result-banner" id="resultBanner">
@@ -674,10 +691,25 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
           <div class="rb-detail" id="rbDetail">—</div>
         </div>
 
+        <div class="gate-status-row">
+          <div class="gate-status online" id="connectionStatus">● Server connected</div>
+          <div class="gate-status" id="lastRefresh">Updated just now</div>
+        </div>
+
         <div class="stats-row">
-          <div class="stat-pill"><div class="n" id="statSold">0</div><div class="l">Sold</div></div>
+          <div class="stat-pill"><div class="n" id="statSold">0</div><div class="l">Tickets sold</div></div>
           <div class="stat-pill"><div class="n" id="statCheckedIn">0</div><div class="l">Checked in</div></div>
-          <div class="stat-pill"><div class="n" id="statRevenue">—</div><div class="l">Revenue</div></div>
+          <div class="stat-pill"><div class="n" id="statRemaining">0</div><div class="l">Remaining</div></div>
+          <div class="stat-pill"><div class="n small" id="statRate">0%</div><div class="l">Check-in rate</div></div>
+          <div class="stat-pill"><div class="n small" id="statRevenue">—</div><div class="l">Revenue</div></div>
+        </div>
+
+        <div class="admin-card history-card">
+          <h3>Recent check-ins</h3>
+          <p class="card-sub">Live admission activity, including the staff member who scanned each ticket.</p>
+          <div class="history-list" id="checkinHistory">
+            <div class="tx-empty">No check-ins yet</div>
+          </div>
         </div>
       </div>
 
@@ -697,7 +729,6 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
                   <th>QR</th>
                   <th>Ticket</th>
                   <th>Buyer</th>
-                  <th>Qty</th>
                   <th>Paid</th>
                   <th>Status</th>
                   <th>Purchased</th>
@@ -705,7 +736,7 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
                 </tr>
               </thead>
               <tbody id="txBody">
-                <tr><td colspan="8" class="tx-empty">Loading…</td></tr>
+                <tr><td colspan="7" class="tx-empty">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -1046,6 +1077,8 @@ function showAuthArea(){
   refreshStats();
   loadTickets();
   populateAdminForm();
+  if(statsRefreshTimer) clearInterval(statsRefreshTimer);
+  statsRefreshTimer = setInterval(()=>{ refreshStats(); if(document.getElementById('txPanel').classList.contains('active')) loadTickets(); }, 15000);
 }
 
 document.getElementById('staffNavLink').addEventListener('click', (e)=>{
@@ -1099,6 +1132,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
   stopScanning();
   saveAuth(null);
+  if(statsRefreshTimer) { clearInterval(statsRefreshTimer); statsRefreshTimer = null; }
   showLoginPanel();
 });
 
@@ -1166,6 +1200,7 @@ function stopScanning(){
 
 document.getElementById('startScanBtn').addEventListener('click', startScanning);
 document.getElementById('stopScanBtn').addEventListener('click', stopScanning);
+document.getElementById('refreshGateBtn').addEventListener('click', ()=>{ refreshStats(); loadTickets(); });
 
 let lastScanTime = 0;
 function scanLoop(){
@@ -1244,17 +1279,59 @@ async function refreshStats(){
   try{
     const res = await fetch('/api/stats', { headers: authHeaders() });
     if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
+    if(!res.ok) throw new Error('stats request failed');
     const data = await res.json();
-    document.getElementById('statSold').textContent = data.sold;
-    document.getElementById('statCheckedIn').textContent = data.checkedIn;
+    document.getElementById('statSold').textContent = data.sold ?? 0;
+    document.getElementById('statCheckedIn').textContent = data.checkedIn ?? 0;
+    document.getElementById('statRemaining').textContent = data.remaining ?? Math.max(0, (data.sold || 0) - (data.checkedIn || 0));
+    document.getElementById('statRate').textContent = (data.checkInRate ?? 0) + '%';
     document.getElementById('statRevenue').textContent = fmtMoney(data.revenue);
-  }catch(e){ /* leave last-known */ }
+    setConnectionState(true);
+    updateLastRefresh();
+  }catch(e){
+    setConnectionState(false);
+  }
 }
 
 /* ============================================================
    TRANSACTIONS LIST
    ============================================================ */
 let allTickets = [];
+let statsRefreshTimer = null;
+
+function setConnectionState(online){
+  const el = document.getElementById('connectionStatus');
+  if(!el) return;
+  el.className = 'gate-status ' + (online ? 'online' : 'offline');
+  el.textContent = online ? '● Server connected' : '● Connection problem';
+}
+
+function updateLastRefresh(){
+  const el = document.getElementById('lastRefresh');
+  if(el) el.textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+function renderCheckinHistory(){
+  const holder = document.getElementById('checkinHistory');
+  if(!holder) return;
+  const recent = allTickets
+    .filter(t => t.status === 'checked-in' && t.checkedInAt)
+    .sort((a,b) => new Date(b.checkedInAt) - new Date(a.checkedInAt))
+    .slice(0, 10);
+  if(!recent.length){
+    holder.innerHTML = '<div class="tx-empty">No check-ins yet</div>';
+    return;
+  }
+  holder.innerHTML = recent.map(t => `
+    <div class="history-item">
+      <div class="history-main">
+        <div class="history-name">${escapeHtml(t.name)} <span class="mono" style="font-weight:600;">${escapeHtml(t.id)}</span></div>
+        <div class="history-meta">Checked in by ${escapeHtml(t.checkedInBy || 'staff')} · ${t.ticketCount > 1 ? 'Ticket ' + (t.ticketNumber || 1) + ' of ' + t.ticketCount : 'Single ticket'}</div>
+      </div>
+      <div class="history-time">${escapeHtml(new Date(t.checkedInAt).toLocaleTimeString())}</div>
+    </div>`).join('');
+}
+
 
 async function loadTickets(){
   if(!auth || !auth.token) return;
@@ -1263,21 +1340,25 @@ async function loadTickets(){
     const res = await fetch('/api/tickets', { headers: authHeaders() });
     if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
     if(!res.ok){
-      body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="tx-empty">Could not load tickets</td></tr>';
       return;
     }
     const data = await res.json();
     allTickets = data.tickets || [];
     renderTickets(allTickets);
+    renderCheckinHistory();
+    setConnectionState(true);
+    updateLastRefresh();
   }catch(e){
-    body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="tx-empty">Could not load tickets</td></tr>';
+    setConnectionState(false);
   }
 }
 
 function renderTickets(list){
   const body = document.getElementById('txBody');
   if(!list.length){
-    body.innerHTML = '<tr><td colspan="8" class="tx-empty">No tickets sold yet</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="tx-empty">No tickets sold yet</td></tr>';
     return;
   }
   body.innerHTML = '';
@@ -1288,9 +1369,8 @@ function renderTickets(list){
     const when = t.purchasedAt ? new Date(t.purchasedAt).toLocaleString() : '—';
     tr.innerHTML = `
       <td><div class="qr-preview" id="txqr-${i}"></div></td>
-      <td class="mono">${escapeHtml(t.id)}</td>
+      <td class="mono"><strong>${escapeHtml(t.id)}</strong><br><span style="color:#789;font-size:11px;">${t.ticketCount > 1 ? 'Ticket ' + (t.ticketNumber || 1) + ' of ' + t.ticketCount : 'Single ticket'}</span></td>
       <td><strong>${escapeHtml(t.name)}</strong><br><span style="color:#789;font-size:12px;">${escapeHtml(t.email)}</span></td>
-      <td>${t.qty}</td>
       <td>${fmtMoney(t.amountPaid)}</td>
       <td><span class="badge-status ${statusClass}">${statusLabel}</span>${t.checkedInBy ? '<br><span style="color:#789;font-size:11px;">by ' + escapeHtml(t.checkedInBy) + '</span>' : ''}</td>
       <td style="white-space:nowrap;font-size:12px;">${escapeHtml(when)}${t.checkedInAt ? '<br><span style="color:#789;font-size:11px;">in: ' + escapeHtml(new Date(t.checkedInAt).toLocaleString()) + '</span>' : ''}</td>

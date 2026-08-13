@@ -29,7 +29,10 @@ module.exports = async (req, res) => {
       if (t.status === 'checked-in') checkedIn++;
     }
 
-    return res.status(200).json({ sold, checkedIn, revenue });
+    const remaining = Math.max(0, sold - checkedIn);
+    const checkInRate = sold > 0 ? Number(((checkedIn / sold) * 100).toFixed(1)) : 0;
+
+    return res.status(200).json({ sold, checkedIn, remaining, checkInRate, revenue });
   } catch (err) {
     console.error(err);
     if (err.code === 'REDIS_NOT_CONFIGURED') {
