@@ -21,23 +21,13 @@
   --ink:#04222f;
   --white:#ffffff;
   --shadow: 0 12px 30px rgba(4,34,47,0.18);
-  --page-bg:#eafbfd;
+  --page-bg:#e8f9fc;
   --surface:#ffffff;
-  --surface-soft:#f7fdfd;
+  --surface-soft:#f4fcfd;
   --text-muted:#456;
   --border:#dff3f4;
-}
-
-html[data-theme="dark"]{
-  --foam:#071923;
-  --ink:#eefcff;
-  --white:#102833;
-  --page-bg:#071923;
-  --surface:#102833;
-  --surface-soft:#0c2029;
-  --text-muted:#a9c0c8;
-  --border:#24444f;
-  --shadow:0 16px 36px rgba(0,0,0,0.34);
+  --cyan-bright:#00d4ff;
+  --cyan-mid:#00b4d8;
 }
 
 *{box-sizing:border-box;}
@@ -46,7 +36,6 @@ body{
   font-family:'Manrope',sans-serif;
   background:var(--page-bg);
   color:var(--ink);
-  transition:background .25s ease,color .25s ease;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
@@ -61,86 +50,95 @@ a{color:inherit;}
 
 .container{max-width:1080px;margin:0 auto;padding:0 24px;}
 
-/* ---------- THEME / NAV ---------- */
-.theme-toggle{
-  width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,0.10);color:#fff;border:1px solid rgba(255,255,255,0.18);
-  font-size:17px;transition:background .2s,transform .2s;
-}
-.theme-toggle:hover{background:rgba(255,255,255,0.18);transform:translateY(-1px);}
-.theme-toggle .sun-icon{display:none;}
-html[data-theme="dark"] .theme-toggle .moon-icon{display:none;}
-html[data-theme="dark"] .theme-toggle .sun-icon{display:inline;}
+/* ---------- NAV ---------- */
 .nav-actions{display:flex;align-items:center;gap:9px;}
 .logo-img{width:52px;height:52px;object-fit:contain;display:block;filter:drop-shadow(0 3px 8px rgba(0,0,0,.22));}
 
-/* ---------- NAV ---------- */
 .navbar{
   position:sticky;top:0;z-index:50;
-  background:rgba(6,58,82,0.92);
-  backdrop-filter:blur(8px);
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 4px 20px rgba(4,34,47,.08);
   padding:14px 0;
 }
 .nav-inner{display:flex;align-items:center;justify-content:space-between;}
 .wordmark{
   display:flex;align-items:center;gap:10px;
 }
-.ring-badge{
-  width:42px;height:42px;border-radius:50%;
-  background:conic-gradient(var(--coral) 0deg 90deg, var(--white) 90deg 180deg, var(--coral) 180deg 270deg, var(--white) 270deg 360deg);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 0 3px rgba(255,255,255,0.15);
-  flex-shrink:0;
-}
-.ring-badge span{
-  background:var(--pool-deep);
-  color:var(--white);
-  width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Fredoka',sans-serif;font-weight:700;font-size:11px;letter-spacing:0.5px;
-}
-.wordmark-text{color:var(--white);font-size:15px;letter-spacing:2px;font-weight:600;opacity:0.9;}
+.wordmark-text{color:var(--pool-deep);font-size:15px;letter-spacing:2px;font-weight:600;}
 .nav-links{display:flex;gap:22px;align-items:center;}
 .nav-links a{
-  color:rgba(255,255,255,0.8);text-decoration:none;font-size:14px;font-weight:600;
+  color:rgba(4,34,47,.72);text-decoration:none;font-size:14px;font-weight:600;
   transition:color .2s;
 }
-.nav-links a:hover{color:var(--sun);}
+.nav-links a:hover{color:var(--aqua-dark);}
 .staff-link{
-  background:rgba(255,255,255,0.1);
+  background:rgba(6,58,82,.08);
   padding:8px 14px;border-radius:20px;
   font-size:13px !important;
-  color:rgba(255,255,255,0.9);
+  color:var(--pool-deep);
   text-decoration:none;
   font-weight:600;
   flex-shrink:0;
   transition:background .2s;
 }
 .staff-link:hover{
-  background:rgba(255,255,255,0.18);
+  background:rgba(6,58,82,.14);
 }
 
 /* ---------- HERO ---------- */
 .hero{
   position:relative;
-  background-image:linear-gradient(180deg,rgba(3,24,34,.30),rgba(3,24,34,.18)),url("assets/aquafest-light.png");
+  background-color:#00b4d8;
+  background-image:
+    linear-gradient(180deg, rgba(0,180,216,.25) 0%, rgba(6,58,82,.45) 55%, rgba(6,58,82,.55) 100%),
+    url("assets/aquafest-light.png");
   background-size:cover;
   background-position:center center;
   padding:70px 0 0;
   overflow:hidden;
   min-height:720px;
 }
-html[data-theme="dark"] .hero{
-  background-image:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,18,25,.46)),url("assets/aquafest-dark.png");
+/* Soft water splash accents (decorative, no extra assets) */
+.hero::before,
+.hero::after{
+  content:"";
+  position:absolute;
+  pointer-events:none;
+  z-index:2;
+  border-radius:50%;
+  filter:blur(0.5px);
+}
+.hero::before{
+  width:280px;height:180px;
+  top:-40px;left:-60px;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(255,255,255,.55) 0 8%, transparent 9%),
+    radial-gradient(circle at 55% 25%, rgba(255,255,255,.4) 0 5%, transparent 6%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,.35) 0 12%, transparent 13%),
+    radial-gradient(ellipse at 40% 70%, rgba(0,212,255,.35) 0 40%, transparent 55%);
+  opacity:.9;
+}
+.hero::after{
+  width:320px;height:220px;
+  bottom:80px;right:-80px;
+  background:
+    radial-gradient(circle at 40% 50%, rgba(255,255,255,.5) 0 7%, transparent 8%),
+    radial-gradient(circle at 65% 30%, rgba(255,255,255,.35) 0 10%, transparent 11%),
+    radial-gradient(ellipse at 50% 60%, rgba(0,212,255,.3) 0 35%, transparent 50%);
+  opacity:.85;
 }
 .hero-inner{position:relative;z-index:3;text-align:center;padding:86px 0 150px;}
 .eyebrow{
   display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.18);
+  backdrop-filter:blur(8px);
   color:var(--sun);
   padding:7px 16px;border-radius:20px;
   font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
   margin-bottom:22px;
+  border:1px solid rgba(255,255,255,.25);
 }
 .hero h1{
   color:var(--white);
@@ -148,13 +146,14 @@ html[data-theme="dark"] .hero{
   line-height:0.95;
   font-weight:700;
   letter-spacing:-1px;
-  background:linear-gradient(180deg,#ffffff 0%, #cdf9f2 100%);
+  background:linear-gradient(180deg,#ffffff 0%, #b8f5ff 100%);
   -webkit-background-clip:text;
   background-clip:text;
   -webkit-text-fill-color:transparent;
+  text-shadow:0 4px 24px rgba(0,180,216,.35);
 }
 .hero p.sub{
-  color:rgba(255,255,255,0.85);
+  color:rgba(255,255,255,0.92);
   font-size:18px;
   max-width:520px;
   margin:18px auto 0;
@@ -167,10 +166,11 @@ html[data-theme="dark"] .hero{
 }
 .count-ring{
   width:92px;height:92px;border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
-  border:3px solid var(--sun);
+  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.28), rgba(255,255,255,0.08));
+  border:2.5px solid rgba(255,255,255,0.55);
+  backdrop-filter:blur(6px);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:0 0 0 6px rgba(255,201,60,0.12), var(--shadow);
+  box-shadow:0 0 0 6px rgba(0,212,255,0.15), 0 8px 24px rgba(0,0,0,0.18);
 }
 .count-ring .num{
   font-family:'Fredoka',sans-serif;font-weight:700;font-size:28px;color:var(--white);
@@ -185,20 +185,25 @@ html[data-theme="dark"] .hero{
 
 .cta-row{display:flex;gap:14px;justify-content:center;margin-top:38px;flex-wrap:wrap;}
 .btn{
-  padding:15px 30px;border-radius:30px;font-weight:700;font-size:15px;
-  transition:transform .15s ease, box-shadow .15s ease;
+  padding:16px 32px;border-radius:999px;font-weight:700;font-size:15px;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
   display:inline-flex;align-items:center;gap:8px;
+  text-decoration:none;
 }
 .btn:active{transform:scale(0.97);}
 .btn-primary{
-  background:var(--coral);color:var(--white);
-  box-shadow:0 10px 24px rgba(255,107,107,0.4);
+  background:linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  color:var(--white);
+  box-shadow:0 10px 28px rgba(0,114,255,0.35);
 }
-.btn-primary:hover{box-shadow:0 14px 30px rgba(255,107,107,0.55);}
+.btn-primary:hover{box-shadow:0 14px 34px rgba(0,114,255,0.5); transform:translateY(-1px);}
 .btn-ghost{
-  background:rgba(255,255,255,0.12);color:var(--white);
-  border:1px solid rgba(255,255,255,0.3);
+  background:rgba(255,255,255,0.22);
+  color:var(--white);
+  border:1.5px solid rgba(255,255,255,0.45);
+  backdrop-filter:blur(8px);
 }
+.btn-ghost:hover{background:rgba(255,255,255,0.32);}
 .btn-secondary{
   background:var(--pool-deep);color:#fff;
 }
@@ -209,7 +214,6 @@ html[data-theme="dark"] .hero{
 
 .wave-wrap{
   position:absolute;bottom:-2px;left:0;width:100%;line-height:0;z-index:2;
-  display:none;
 }
 .wave-wrap svg{width:100%;height:auto;display:block;}
 .wave-anim{animation:waveShift 9s linear infinite;}
@@ -244,7 +248,7 @@ html[data-theme="dark"] .hero{
   border:1px solid #dff3f4;
 }
 .price-strip{
-  background:linear-gradient(120deg,var(--aqua),var(--aqua-dark));
+  background:linear-gradient(120deg, #00d4ff 0%, #00b4d8 45%, #0fae9f 100%);
   padding:26px 30px;color:var(--white);
   display:flex;justify-content:space-between;align-items:flex-end;
 }
@@ -279,10 +283,18 @@ html[data-theme="dark"] .hero{
 .total-row .label{font-size:13px;color:#567;font-weight:600;}
 .total-row .val{font-family:'Fredoka',sans-serif;font-size:24px;color:var(--pool-deep);font-weight:700;}
 .buy-btn{
-  width:100%;background:var(--coral);color:var(--white);padding:16px;border-radius:14px;
-  font-weight:700;font-size:15.5px;box-shadow:0 10px 22px rgba(255,107,107,0.35);
+  width:100%;
+  background:linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  color:var(--white);
+  padding:16px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:15.5px;
+  box-shadow:0 10px 24px rgba(0,114,255,0.35);
+  transition:box-shadow .15s, transform .15s;
 }
-.buy-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.buy-btn:hover{box-shadow:0 14px 30px rgba(0,114,255,0.5); transform:translateY(-1px);}
+.buy-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 .form-msg{font-size:12.5px;color:#c0392b;margin-top:8px;min-height:16px;}
 .paystack-note{
   font-size:11.5px;color:#89a;text-align:center;margin-top:12px;line-height:1.5;
@@ -526,69 +538,14 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
   .staff-link{padding:7px 10px;font-size:12px !important;}
 }
 
-html[data-theme="dark"] .section-head h2,
-html[data-theme="dark"] .step h3,
-html[data-theme="dark"] .login-card h3,
-html[data-theme="dark"] .admin-card h3,
-html[data-theme="dark"] .wb-name,
-html[data-theme="dark"] .wb-meta .v{color:#eafcff;}
-html[data-theme="dark"] .section-head p,
-html[data-theme="dark"] .step p,
-html[data-theme="dark"] .login-card .hint,
-html[data-theme="dark"] .admin-card .card-sub,
-html[data-theme="dark"] .history-meta,
-html[data-theme="dark"] .history-time{color:#9bb5be;}
-html[data-theme="dark"] .field input,
-html[data-theme="dark"] .field select,
-html[data-theme="dark"] .tx-toolbar input{
-  background:#0a1d25;color:#eefcff;border-color:#294953;
-}
-html[data-theme="dark"] .field label{color:#bfe4ea;}
-html[data-theme="dark"] .qty-btn{background:#0c2029;color:#dffaff;border-color:#294953;}
-html[data-theme="dark"] .total-row{border-color:#294953;}
-html[data-theme="dark"] .total-row .label{color:#9bb5be;}
-html[data-theme="dark"] .step{border-color:#24444f;}
-html[data-theme="dark"] .step .ico{background:#0c2b36;}
-html[data-theme="dark"] .ticket-card,
-html[data-theme="dark"] .wristband{border-color:#24444f;}
-html[data-theme="dark"] .wb-new{background:#0c2029;color:#eafcff;border-color:#294953;}
-html[data-theme="dark"] .paystack-note{color:#8da8b1;}
-html[data-theme="dark"] .history-item{border-color:#294953;background:#0c2029;}
-html[data-theme="dark"] .tx-table-wrap{border-color:#294953;}
-html[data-theme="dark"] table.tx-table{background:#102833;color:#eafcff;}
-html[data-theme="dark"] table.tx-table th{background:#0c2029;color:#bfe4ea;}
-html[data-theme="dark"] table.tx-table td{border-color:#24444f;}
-html[data-theme="dark"] table.tx-table tr:hover td{background:#14333e;}
-html[data-theme="dark"] .tx-action{background:#163540;color:#dffaff;}
-html[data-theme="dark"] footer{background:#04131a;}
-html[data-theme="dark"] .section[style*="background:#fff"]{background:var(--surface) !important;}
 @media(max-width:640px){
   .hero{min-height:680px;background-position:center center;}
   .hero-inner{padding-top:55px;padding-bottom:125px;}
 }
-
-html:not([data-theme="dark"]) .navbar{
-  background:rgba(255,255,255,.88);
-  box-shadow:0 4px 20px rgba(4,34,47,.08);
-}
-html:not([data-theme="dark"]) .wordmark-text{color:var(--pool-deep);}
-html:not([data-theme="dark"]) .nav-links a{color:rgba(4,34,47,.72);}
-html:not([data-theme="dark"]) .nav-links a:hover{color:var(--aqua-dark);}
-html:not([data-theme="dark"]) .staff-link{background:rgba(6,58,82,.08);color:var(--pool-deep);}
-html:not([data-theme="dark"]) .staff-link:hover{background:rgba(6,58,82,.14);}
-html:not([data-theme="dark"]) .theme-toggle{background:rgba(6,58,82,.08);color:var(--pool-deep);border-color:rgba(6,58,82,.14);}
-html:not([data-theme="dark"]) .theme-toggle:hover{background:rgba(6,58,82,.14);}
 .hero h1,.hero p.sub,.hero .eyebrow,.hero .countdown,.hero .countdown-note,.hero .cta-row{filter:drop-shadow(0 3px 10px rgba(0,0,0,.28));}
 </style>
 </head>
 <body>
-<script>
-(function(){
-  const saved=localStorage.getItem('aquafest-theme');
-  const theme=saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  document.documentElement.dataset.theme=theme;
-})();
-</script>
 
 <!-- ================= NAV ================= -->
 <div class="navbar">
@@ -602,10 +559,6 @@ html:not([data-theme="dark"]) .theme-toggle:hover{background:rgba(6,58,82,.14);}
         <a href="#tickets">Get Tickets</a>
         <a href="#how">How it works</a>
       </div>
-      <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch theme" title="Switch theme">
-        <span class="moon-icon" aria-hidden="true">☾</span>
-        <span class="sun-icon" aria-hidden="true">☀</span>
-      </button>
       <a href="#" id="staffNavLink" class="staff-link">Gate Staff →</a>
     </div>
   </div>
@@ -640,8 +593,8 @@ html:not([data-theme="dark"]) .theme-toggle:hover{background:rgba(6,58,82,.14);}
     <div class="wave-wrap">
       <svg viewBox="0 0 1600 140" preserveAspectRatio="none">
         <g class="wave-anim">
-          <path fill="#eafbfd" d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 C1400,120 1500,40 1600,60 L1600,140 L0,140 Z" />
-          <path fill="#eafbfd" d="M1600,60 C1800,120 2000,0 2200,60 C2400,120 2600,0 2800,60 C3000,120 3100,40 3200,60 L3200,140 L1600,140 Z" />
+          <path fill="#e8f9fc" d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 C1400,120 1500,40 1600,60 L1600,140 L0,140 Z" />
+          <path fill="#e8f9fc" d="M1600,60 C1800,120 2000,0 2200,60 C2400,120 2600,0 2800,60 C3000,120 3100,40 3200,60 L3200,140 L1600,140 Z" />
         </g>
       </svg>
     </div>
@@ -1228,21 +1181,6 @@ document.getElementById('exitStaffLink').addEventListener('click', (e)=>{
   document.getElementById('publicSite').style.display = 'block';
   window.scrollTo(0,0);
 });
-
-/* ============================================================
-   THEME
-   ============================================================ */
-const themeToggle = document.getElementById('themeToggle');
-function applyTheme(theme){
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem('aquafest-theme', theme);
-  themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-  themeToggle.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
-}
-themeToggle.addEventListener('click', ()=>{
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-});
-applyTheme(document.documentElement.dataset.theme || 'light');
 
 /* ============================================================
    LOGIN / LOGOUT
