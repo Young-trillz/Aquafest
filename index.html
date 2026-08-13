@@ -21,14 +21,32 @@
   --ink:#04222f;
   --white:#ffffff;
   --shadow: 0 12px 30px rgba(4,34,47,0.18);
+  --page-bg:#eafbfd;
+  --surface:#ffffff;
+  --surface-soft:#f7fdfd;
+  --text-muted:#456;
+  --border:#dff3f4;
+}
+
+html[data-theme="dark"]{
+  --foam:#071923;
+  --ink:#eefcff;
+  --white:#102833;
+  --page-bg:#071923;
+  --surface:#102833;
+  --surface-soft:#0c2029;
+  --text-muted:#a9c0c8;
+  --border:#24444f;
+  --shadow:0 16px 36px rgba(0,0,0,0.34);
 }
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
   font-family:'Manrope',sans-serif;
-  background:var(--foam);
+  background:var(--page-bg);
   color:var(--ink);
+  transition:background .25s ease,color .25s ease;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
@@ -42,6 +60,19 @@ a{color:inherit;}
 ::selection{background:var(--sun);color:var(--ink);}
 
 .container{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+/* ---------- THEME / NAV ---------- */
+.theme-toggle{
+  width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.10);color:#fff;border:1px solid rgba(255,255,255,0.18);
+  font-size:17px;transition:background .2s,transform .2s;
+}
+.theme-toggle:hover{background:rgba(255,255,255,0.18);transform:translateY(-1px);}
+.theme-toggle .sun-icon{display:none;}
+html[data-theme="dark"] .theme-toggle .moon-icon{display:none;}
+html[data-theme="dark"] .theme-toggle .sun-icon{display:inline;}
+.nav-actions{display:flex;align-items:center;gap:9px;}
+.logo-img{width:52px;height:52px;object-fit:contain;display:block;filter:drop-shadow(0 3px 8px rgba(0,0,0,.22));}
 
 /* ---------- NAV ---------- */
 .navbar{
@@ -92,11 +123,17 @@ a{color:inherit;}
 /* ---------- HERO ---------- */
 .hero{
   position:relative;
-  background:linear-gradient(180deg,var(--pool-deep) 0%, var(--pool-mid) 65%, var(--aqua-dark) 100%);
+  background-image:linear-gradient(180deg,rgba(3,24,34,.30),rgba(3,24,34,.18)),url("assets/aquafest-light.png");
+  background-size:cover;
+  background-position:center center;
   padding:70px 0 0;
   overflow:hidden;
+  min-height:720px;
 }
-.hero-inner{position:relative;z-index:3;text-align:center;padding-bottom:120px;}
+html[data-theme="dark"] .hero{
+  background-image:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,18,25,.46)),url("assets/aquafest-dark.png");
+}
+.hero-inner{position:relative;z-index:3;text-align:center;padding:86px 0 150px;}
 .eyebrow{
   display:inline-flex;align-items:center;gap:8px;
   background:rgba(255,255,255,0.1);
@@ -172,6 +209,7 @@ a{color:inherit;}
 
 .wave-wrap{
   position:absolute;bottom:-2px;left:0;width:100%;line-height:0;z-index:2;
+  display:none;
 }
 .wave-wrap svg{width:100%;height:auto;display:block;}
 .wave-anim{animation:waveShift 9s linear infinite;}
@@ -198,7 +236,7 @@ a{color:inherit;}
 
 /* ---------- TICKETS ---------- */
 .ticket-card{
-  background:var(--white);
+  background:var(--surface);
   border-radius:26px;
   box-shadow:var(--shadow);
   max-width:460px;margin:0 auto;
@@ -224,7 +262,7 @@ a{color:inherit;}
 }
 .field input, .field select{
   width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid #dbeef0;
-  font-family:inherit;font-size:14.5px;background:#f7fdfd;color:var(--ink);
+  font-family:inherit;font-size:14.5px;background:var(--surface-soft);color:var(--ink);
   transition:border-color .15s;
 }
 .field input:focus, .field select:focus{outline:none;border-color:var(--aqua-dark);}
@@ -253,7 +291,7 @@ a{color:inherit;}
 /* ---------- WRISTBAND TICKET (result) ---------- */
 .wristband-wrap{max-width:460px;margin:0 auto;display:none;}
 .wristband{
-  background:var(--white);border-radius:26px;box-shadow:var(--shadow);overflow:hidden;
+  background:var(--surface);border-radius:26px;box-shadow:var(--shadow);overflow:hidden;
   border:1px solid #dff3f4;position:relative;
 }
 .wb-top{
@@ -275,7 +313,7 @@ a{color:inherit;}
   background-repeat: repeat-x;
 }
 .wb-body{padding:6px 26px 26px;text-align:center;}
-.wb-qr{margin:14px auto;padding:14px;background:var(--white);border-radius:16px;display:inline-block;border:2px dashed #cdeef0;}
+.wb-qr{margin:14px auto;padding:14px;background:var(--surface);border-radius:16px;display:inline-block;border:2px dashed #cdeef0;}
 .wb-name{font-family:'Fredoka',sans-serif;font-size:20px;color:var(--pool-deep);margin-top:6px;}
 .wb-id{font-size:12px;color:#789;margin-top:4px;letter-spacing:1px;}
 .wb-meta{
@@ -295,7 +333,7 @@ a{color:inherit;}
 /* ---------- HOW IT WORKS ---------- */
 .steps{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
 .step{
-  background:var(--white);border-radius:20px;padding:26px 22px;width:220px;box-shadow:0 8px 20px rgba(4,34,47,0.07);
+  background:var(--surface);border-radius:20px;padding:26px 22px;width:220px;box-shadow:0 8px 20px rgba(4,34,47,0.07);
   border:1px solid #eaf7f8;
 }
 .step .ico{
@@ -322,7 +360,7 @@ a{color:inherit;}
 
 /* Login card */
 .login-card{
-  background:var(--white);
+  background:var(--surface);
   border-radius:22px;
   padding:28px 26px;
   text-align:left;
@@ -390,7 +428,7 @@ a{color:inherit;}
 .stat-pill .n.small{font-size:18px;}
 .history-card{margin-top:22px;text-align:left;}
 .history-list{display:flex;flex-direction:column;gap:8px;}
-.history-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5f0f1;border-radius:12px;background:#fbfefe;}
+.history-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5f0f1;border-radius:12px;background:var(--surface-soft);}
 .history-main{min-width:0;}
 .history-name{font-weight:800;color:var(--pool-deep);font-size:13px;}
 .history-meta{font-size:11px;color:#789;margin-top:3px;}
@@ -399,7 +437,7 @@ a{color:inherit;}
 
 /* Admin panel cards */
 .admin-card{
-  background:var(--white);
+  background:var(--surface);
   border-radius:18px;
   padding:22px 22px;
   margin-bottom:18px;
@@ -421,7 +459,7 @@ a{color:inherit;}
 }
 .tx-toolbar input{
   flex:1;min-width:160px;padding:10px 14px;border-radius:12px;border:1.5px solid #dbeef0;
-  font-family:inherit;font-size:13.5px;background:#f7fdfd;
+  font-family:inherit;font-size:13.5px;background:var(--surface-soft);
 }
 .tx-table-wrap{
   overflow-x:auto;
@@ -432,7 +470,7 @@ table.tx-table{
   width:100%;
   border-collapse:collapse;
   font-size:13px;
-  background:#fff;
+  background:var(--surface);
 }
 table.tx-table th{
   text-align:left;padding:12px 14px;background:var(--foam);color:var(--pool-deep);
@@ -455,7 +493,7 @@ table.tx-table tr:hover td{background:#f9fdfd;}
 .tx-action.danger{background:#fff0f0;color:#a33;}
 .tx-action.refund{background:#f3edff;color:#6941a5;}
 .qr-preview{
-  width:56px;height:56px;border-radius:8px;border:1px dashed #cdeef0;background:#fff;
+  width:56px;height:56px;border-radius:8px;border:1px dashed #cdeef0;background:var(--surface);
   display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
 }
 .qr-preview canvas, .qr-preview img{width:52px !important;height:52px !important;}
@@ -487,22 +525,89 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
   .wordmark-text{font-size:12px;letter-spacing:1px;}
   .staff-link{padding:7px 10px;font-size:12px !important;}
 }
+
+html[data-theme="dark"] .section-head h2,
+html[data-theme="dark"] .step h3,
+html[data-theme="dark"] .login-card h3,
+html[data-theme="dark"] .admin-card h3,
+html[data-theme="dark"] .wb-name,
+html[data-theme="dark"] .wb-meta .v{color:#eafcff;}
+html[data-theme="dark"] .section-head p,
+html[data-theme="dark"] .step p,
+html[data-theme="dark"] .login-card .hint,
+html[data-theme="dark"] .admin-card .card-sub,
+html[data-theme="dark"] .history-meta,
+html[data-theme="dark"] .history-time{color:#9bb5be;}
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .tx-toolbar input{
+  background:#0a1d25;color:#eefcff;border-color:#294953;
+}
+html[data-theme="dark"] .field label{color:#bfe4ea;}
+html[data-theme="dark"] .qty-btn{background:#0c2029;color:#dffaff;border-color:#294953;}
+html[data-theme="dark"] .total-row{border-color:#294953;}
+html[data-theme="dark"] .total-row .label{color:#9bb5be;}
+html[data-theme="dark"] .step{border-color:#24444f;}
+html[data-theme="dark"] .step .ico{background:#0c2b36;}
+html[data-theme="dark"] .ticket-card,
+html[data-theme="dark"] .wristband{border-color:#24444f;}
+html[data-theme="dark"] .wb-new{background:#0c2029;color:#eafcff;border-color:#294953;}
+html[data-theme="dark"] .paystack-note{color:#8da8b1;}
+html[data-theme="dark"] .history-item{border-color:#294953;background:#0c2029;}
+html[data-theme="dark"] .tx-table-wrap{border-color:#294953;}
+html[data-theme="dark"] table.tx-table{background:#102833;color:#eafcff;}
+html[data-theme="dark"] table.tx-table th{background:#0c2029;color:#bfe4ea;}
+html[data-theme="dark"] table.tx-table td{border-color:#24444f;}
+html[data-theme="dark"] table.tx-table tr:hover td{background:#14333e;}
+html[data-theme="dark"] .tx-action{background:#163540;color:#dffaff;}
+html[data-theme="dark"] footer{background:#04131a;}
+html[data-theme="dark"] .section[style*="background:#fff"]{background:var(--surface) !important;}
+@media(max-width:640px){
+  .hero{min-height:680px;background-position:center center;}
+  .hero-inner{padding-top:55px;padding-bottom:125px;}
+}
+
+html:not([data-theme="dark"]) .navbar{
+  background:rgba(255,255,255,.88);
+  box-shadow:0 4px 20px rgba(4,34,47,.08);
+}
+html:not([data-theme="dark"]) .wordmark-text{color:var(--pool-deep);}
+html:not([data-theme="dark"]) .nav-links a{color:rgba(4,34,47,.72);}
+html:not([data-theme="dark"]) .nav-links a:hover{color:var(--aqua-dark);}
+html:not([data-theme="dark"]) .staff-link{background:rgba(6,58,82,.08);color:var(--pool-deep);}
+html:not([data-theme="dark"]) .staff-link:hover{background:rgba(6,58,82,.14);}
+html:not([data-theme="dark"]) .theme-toggle{background:rgba(6,58,82,.08);color:var(--pool-deep);border-color:rgba(6,58,82,.14);}
+html:not([data-theme="dark"]) .theme-toggle:hover{background:rgba(6,58,82,.14);}
+.hero h1,.hero p.sub,.hero .eyebrow,.hero .countdown,.hero .countdown-note,.hero .cta-row{filter:drop-shadow(0 3px 10px rgba(0,0,0,.28));}
 </style>
 </head>
 <body>
+<script>
+(function(){
+  const saved=localStorage.getItem('aquafest-theme');
+  const theme=saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme=theme;
+})();
+</script>
 
 <!-- ================= NAV ================= -->
 <div class="navbar">
   <div class="container nav-inner">
     <div class="wordmark">
-      <div class="ring-badge"><span>HOH</span></div>
+      <img class="logo-img" src="assets/hoh-logo.png" alt="House of Hush logo">
       <div class="wordmark-text">AQUAFEST</div>
     </div>
-    <div class="nav-links">
-      <a href="#tickets">Get Tickets</a>
-      <a href="#how">How it works</a>
+    <div class="nav-actions">
+      <div class="nav-links">
+        <a href="#tickets">Get Tickets</a>
+        <a href="#how">How it works</a>
+      </div>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch theme" title="Switch theme">
+        <span class="moon-icon" aria-hidden="true">☾</span>
+        <span class="sun-icon" aria-hidden="true">☀</span>
+      </button>
+      <a href="#" id="staffNavLink" class="staff-link">Gate Staff →</a>
     </div>
-    <a href="#" id="staffNavLink" class="staff-link">Gate Staff →</a>
   </div>
 </div>
 
@@ -622,7 +727,7 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
   </section>
 
   <!-- HOW IT WORKS -->
-  <section class="section" id="how" style="background:#fff;">
+  <section class="section" id="how" style="background:var(--surface);">
     <div class="container">
       <div class="section-head">
         <div class="eyebrow-dark">Simple &amp; splash-proof</div>
@@ -1123,6 +1228,21 @@ document.getElementById('exitStaffLink').addEventListener('click', (e)=>{
   document.getElementById('publicSite').style.display = 'block';
   window.scrollTo(0,0);
 });
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(theme){
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('aquafest-theme', theme);
+  themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  themeToggle.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+}
+themeToggle.addEventListener('click', ()=>{
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+});
+applyTheme(document.documentElement.dataset.theme || 'light');
 
 /* ============================================================
    LOGIN / LOGOUT
