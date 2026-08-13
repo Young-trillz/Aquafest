@@ -1228,13 +1228,13 @@ async function handleScannedPayload(raw){
   if(data.result === 'already-used'){
     banner.className = 'result-banner used';
     title.textContent = '⚠ Already checked in';
-    detail.textContent = data.ticket.name + ' (' + data.ticket.id + ') was already scanned in at ' + new Date(data.ticket.checkedInAt).toLocaleTimeString() + '.';
+    detail.textContent = data.ticket.name + ' (' + data.ticket.id + ') was already scanned in at ' + (data.ticket.checkedInAt ? new Date(data.ticket.checkedInAt).toLocaleTimeString() : 'an earlier time') + (data.ticket.checkedInBy ? ' by ' + data.ticket.checkedInBy : '') + '.';
     return;
   }
 
   banner.className = 'result-banner ok';
   title.textContent = '✓ Access granted';
-  detail.textContent = data.ticket.name + ' — ticket ' + data.ticket.id + ' — welcome to AquaFest!';
+  detail.textContent = data.ticket.name + ' — ticket ' + data.ticket.id + ' — checked in by ' + (data.ticket.checkedInBy || 'staff') + '. Welcome to AquaFest!';
   refreshStats();
   loadTickets();
 }
@@ -1292,8 +1292,8 @@ function renderTickets(list){
       <td><strong>${escapeHtml(t.name)}</strong><br><span style="color:#789;font-size:12px;">${escapeHtml(t.email)}</span></td>
       <td>${t.qty}</td>
       <td>${fmtMoney(t.amountPaid)}</td>
-      <td><span class="badge-status ${statusClass}">${statusLabel}</span></td>
-      <td style="white-space:nowrap;font-size:12px;">${escapeHtml(when)}</td>
+      <td><span class="badge-status ${statusClass}">${statusLabel}</span>${t.checkedInBy ? '<br><span style="color:#789;font-size:11px;">by ' + escapeHtml(t.checkedInBy) + '</span>' : ''}</td>
+      <td style="white-space:nowrap;font-size:12px;">${escapeHtml(when)}${t.checkedInAt ? '<br><span style="color:#789;font-size:11px;">in: ' + escapeHtml(new Date(t.checkedInAt).toLocaleString()) + '</span>' : ''}</td>
       <td class="mono" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.reference || '')}</td>
     `;
     body.appendChild(tr);

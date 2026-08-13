@@ -1,22 +1,66 @@
 // POST /api/create-ticket
-// Body: { reference, name, email, qty, unitPrice }
-// Verifies Paystack, stores one ticket record per purchased ticket, emails all QRs.
+// Body: { reference, name, email, qty }
+// Verifies Paystack, creates one independent ticket per admission, and emails all QRs.
 
 const QRCode = require('qrcode');
+const crypto = require('crypto');
 const { getRedis } = require('./_redis');
 const { loadConfig } = require('./config');
+
+const MAX_QTY = 10;
+const REF_LOCK_TTL_SECONDS = 5 * 60;
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let redis;
+  let lockKey = null;
+  let lockToken = null;
+
   try {
     const { reference, name, email, qty } = req.body || {};
-    const quantity = Math.max(1, Math.min(10, Number(qty) || 0));
+    const quantity = Number(qty);
 
-    if (!reference || !name || !email || !quantity) {
+    if (!reference || !name || !email) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QTY) {
+      return res.status(400).json({ error: `Quantity must be an integer between 1 and ${MAX_QTY}` });
+    }
+
+    redis = getRedis();
+
+    // Idempotency: a successful Paystack reference can only create one purchase.
+    const existingRef = await redis.get(`ref:${reference}`);
+    if (existingRef) {
+      const existingTickets = await loadTicketsFromReference(redis, existingRef);
+      if (existingTickets.length) {
+        return res.status(200).json({ ticket: existingTickets[0], tickets: existingTickets });
+      }
+      return res.status(409).json({ error: 'This payment is still being processed. Please retry shortly.' });
+    }
+
+    // Prevent two simultaneous callbacks/retries from creating duplicate tickets.
+    lockKey = `ref-lock:${reference}`;
+    lockToken = crypto.randomBytes(16).toString('hex');
+    const lockAcquired = await redis.set(lockKey, lockToken, { nx: true, ex: REF_LOCK_TTL_SECONDS });
+    if (!lockAcquired) {
+      const lockedRef = await redis.get(`ref:${reference}`);
+      if (lockedRef) {
+        const tickets = await loadTicketsFromReference(redis, lockedRef);
+        if (tickets.length) return res.status(200).json({ ticket: tickets[0], tickets });
+      }
+      return res.status(409).json({ error: 'This payment is already being processed. Please retry shortly.' });
+    }
+
+    // Re-check after acquiring the lock.
+    const refAfterLock = await redis.get(`ref:${reference}`);
+    if (refAfterLock) {
+      const tickets = await loadTicketsFromReference(redis, refAfterLock);
+      if (tickets.length) return res.status(200).json({ ticket: tickets[0], tickets });
     }
 
     // ---- 1. Verify with Paystack ----
@@ -40,46 +84,28 @@ module.exports = async (req, res) => {
         now.getDate() === ev.getDate()) ||
       now > ev;
     const serverUnit = isDoor ? Number(config.doorPrice) : Number(config.earlyPrice);
-    const minAcceptable = Math.min(Number(config.earlyPrice), Number(config.doorPrice));
-    const paid = Number(verifyData.data.amount);
+    const paidKobo = Number(verifyData.data.amount);
+    const expectedKobo = Math.round(serverUnit * quantity * 100);
 
-    if (paid < Math.round(minAcceptable * quantity * 100)) {
-      return res.status(402).json({ error: 'Amount paid does not match the ticket total' });
+    if (!Number.isFinite(serverUnit) || serverUnit <= 0) {
+      return res.status(500).json({ error: 'Ticket price is not configured correctly' });
     }
 
-    const amountPaid = paid / 100;
-    const redis = getRedis();
-
-    // ---- 3. Idempotency ----
-    const existingRef = await redis.get(`ref:${reference}`);
-    if (existingRef) {
-      let existingIds;
-      try {
-        existingIds = JSON.parse(existingRef);
-      } catch (e) {
-        existingIds = [existingRef];
-      }
-      if (!Array.isArray(existingIds)) existingIds = [existingIds];
-
-      const existingTickets = [];
-      for (const existingId of existingIds) {
-        const existing = await redis.get(`ticket:${existingId}`);
-        if (existing) existingTickets.push(typeof existing === 'string' ? JSON.parse(existing) : existing);
-      }
-      if (existingTickets.length) {
-        return res.status(200).json({ ticket: existingTickets[0], tickets: existingTickets });
-      }
+    if (!Number.isFinite(paidKobo) || paidKobo !== expectedKobo) {
+      return res.status(402).json({ error: 'Amount paid does not match the current ticket total' });
     }
 
-    // ---- 4. Create one independent ticket per purchased ticket ----
-    const purchaseId = 'AQF-P-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const amountPaid = paidKobo / 100;
+
+    // ---- 3. Create one independent ticket per purchased ticket ----
+    const purchaseId = 'AQF-P-' + crypto.randomBytes(4).toString('hex').toUpperCase();
     const purchasedAt = new Date().toISOString();
     const ticketAmount = amountPaid / quantity;
     const ticketIds = [];
     const tickets = [];
 
     for (let i = 1; i <= quantity; i++) {
-      const id = 'AQF-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const id = 'AQF-' + crypto.randomBytes(4).toString('hex').toUpperCase();
       const ticket = {
         id,
         purchaseId,
@@ -101,9 +127,10 @@ module.exports = async (req, res) => {
       tickets.push(ticket);
     }
 
+    // The reference becomes the permanent idempotency record only after all tickets exist.
     await redis.set(`ref:${reference}`, JSON.stringify(ticketIds));
 
-    // ---- 5. Email (best-effort) ----
+    // ---- 4. Email (best-effort) ----
     try {
       await sendTicketEmail({ name, email, reference, purchaseId, quantity, amountPaid, tickets });
     } catch (emailErr) {
@@ -117,8 +144,36 @@ module.exports = async (req, res) => {
       return res.status(503).json({ error: err.message });
     }
     return res.status(500).json({ error: 'Something went wrong creating the ticket' });
+  } finally {
+    // Release only our lock. A failed request can then be safely retried.
+    if (redis && lockKey && lockToken) {
+      try {
+        const current = await redis.get(lockKey);
+        if (current === lockToken) await redis.del(lockKey);
+      } catch (e) {
+        console.error('Could not release purchase lock', e);
+      }
+    }
   }
 };
+
+async function loadTicketsFromReference(redis, rawRef) {
+  let ids;
+  try {
+    ids = JSON.parse(rawRef);
+  } catch (e) {
+    ids = [rawRef];
+  }
+  if (!Array.isArray(ids)) ids = [ids];
+
+  const tickets = [];
+  for (const id of ids) {
+    if (!id) continue;
+    const raw = await redis.get(`ticket:${id}`);
+    if (raw) tickets.push(typeof raw === 'string' ? JSON.parse(raw) : raw);
+  }
+  return tickets;
+}
 
 async function sendTicketEmail(purchase) {
   if (!process.env.RESEND_API_KEY) {
@@ -135,6 +190,10 @@ async function sendTicketEmail(purchase) {
     });
   }
 
+  const ticketList = purchase.tickets.map(ticket =>
+    `<li><strong>Ticket ${ticket.ticketNumber} of ${purchase.quantity}</strong> — ${ticket.id}</li>`
+  ).join('');
+
   const emailRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -146,11 +205,13 @@ async function sendTicketEmail(purchase) {
       to: purchase.email,
       subject: 'Your AquaFest tickets',
       html: `
-        <p>Hi ${purchase.name},</p>
+        <p>Hi ${escapeHtml(purchase.name)},</p>
         <p>Your AquaFest purchase is confirmed.</p>
         <p><strong>Tickets:</strong> ${purchase.quantity}<br/>
         <strong>Purchase ID:</strong> ${purchase.purchaseId}</p>
-        <p>Each attached QR code is a separate entry pass. Give one QR code to each person attending. Every QR code can be scanned once at the gate.</p>
+        <p>Each ticket below is a separate entry pass. Give one QR code to each person attending. Every QR code can be scanned once at the gate.</p>
+        <ul>${ticketList}</ul>
+        <p>The QR images are attached to this email.</p>
       `,
       attachments
     })
@@ -160,4 +221,10 @@ async function sendTicketEmail(purchase) {
     const body = await emailRes.text();
     throw new Error(`Resend API error: ${emailRes.status} ${body}`);
   }
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }

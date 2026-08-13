@@ -1,6 +1,7 @@
 // POST /api/checkin
 // Body: { id } — plain ticket id or raw QR JSON payload
 // Requires staff or admin Bearer token.
+// Check-in is atomic: the same ticket can only be admitted once.
 
 const { getRedis } = require('./_redis');
 const { verifyToken } = require('./auth');
@@ -30,20 +31,42 @@ module.exports = async (req, res) => {
     }
 
     const redis = getRedis();
-    const ticket = await redis.get(`ticket:${id}`);
+    const ticketKey = `ticket:${id}`;
+    const ticket = await redis.get(ticketKey);
     if (!ticket) {
       return res.status(404).json({ result: 'invalid' });
     }
 
     const t = typeof ticket === 'string' ? JSON.parse(ticket) : ticket;
 
-    if (t.status === 'checked-in') {
-      return res.status(200).json({ result: 'already-used', ticket: t });
+    // Atomic admission gate. SET NX succeeds for exactly one scanner.
+    const checkinKey = `checkin:${id}`;
+    const checkedInAt = new Date().toISOString();
+    const marker = JSON.stringify({ checkedInAt, username: session.username, role: session.role });
+    const claimed = await redis.set(checkinKey, marker, { nx: true });
+
+    if (!claimed) {
+      const existingMarker = await redis.get(checkinKey);
+      let existing = {};
+      try {
+        existing = typeof existingMarker === 'string' ? JSON.parse(existingMarker) : (existingMarker || {});
+      } catch (e) {}
+
+      return res.status(200).json({
+        result: 'already-used',
+        ticket: {
+          ...t,
+          status: 'checked-in',
+          checkedInAt: existing.checkedInAt || t.checkedInAt || null,
+          checkedInBy: existing.username || t.checkedInBy || null
+        }
+      });
     }
 
     t.status = 'checked-in';
-    t.checkedInAt = new Date().toISOString();
-    await redis.set(`ticket:${id}`, t);
+    t.checkedInAt = checkedInAt;
+    t.checkedInBy = session.username;
+    await redis.set(ticketKey, t);
 
     return res.status(200).json({ result: 'ok', ticket: t });
   } catch (err) {

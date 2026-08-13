@@ -34,6 +34,7 @@ module.exports = async (req, res) => {
         status: t.status,
         purchasedAt: t.purchasedAt,
         checkedInAt: t.checkedInAt || null,
+        checkedInBy: t.checkedInBy || null,
         reference: t.reference,
         qrPayload: JSON.stringify({ id: t.id, name: t.name })
       });
