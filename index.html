@@ -758,6 +758,22 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
       <!-- ADMIN PRICES PANEL -->
       <div class="staff-panel" id="adminPanel">
         <div class="admin-card">
+          <h3>System health &amp; recovery</h3>
+          <p class="card-sub">Check Redis connectivity and download an operational backup before making major event-day changes.</p>
+          <div class="admin-grid">
+            <div><strong>Status</strong><div id="healthStatus" class="admin-msg">Checking…</div></div>
+            <div><strong>Redis latency</strong><div id="healthLatency" class="admin-msg">—</div></div>
+            <div><strong>Paystack</strong><div id="healthPaystack" class="admin-msg">—</div></div>
+            <div><strong>Email</strong><div id="healthResend" class="admin-msg">—</div></div>
+          </div>
+          <div class="admin-actions">
+            <button type="button" class="btn btn-secondary" id="healthRefreshBtn" style="border-radius:12px;">↻ Check health</button>
+            <button type="button" class="btn btn-primary" id="backupBtn" style="border-radius:12px;">⬇ Download backup</button>
+          </div>
+          <div class="admin-msg" id="backupMsg"></div>
+        </div>
+
+        <div class="admin-card">
           <h3>Ticket pricing</h3>
           <p class="card-sub">Changes apply immediately to the public ticket page (no redeploy needed).</p>
           <form id="priceForm">
@@ -1091,6 +1107,7 @@ function showAuthArea(){
   refreshStats();
   loadTickets();
   populateAdminForm();
+  if(auth.role === 'admin') refreshHealth();
   if(statsRefreshTimer) clearInterval(statsRefreshTimer);
   statsRefreshTimer = setInterval(()=>{ refreshStats(); if(document.getElementById('txPanel').classList.contains('active')) loadTickets(); }, 15000);
 }
@@ -1165,7 +1182,7 @@ function switchPanel(panelId){
   });
   if(panelId !== 'scanPanel') stopScanning();
   if(panelId === 'txPanel') loadTickets();
-  if(panelId === 'adminPanel') populateAdminForm();
+  if(panelId === 'adminPanel'){ populateAdminForm(); refreshHealth(); }
 }
 document.querySelectorAll('.staff-tab').forEach(tab=>{
   tab.addEventListener('click', ()=> switchPanel(tab.dataset.panel));
@@ -1293,22 +1310,81 @@ async function handleScannedPayload(raw){
 
 async function refreshStats(){
   if(!auth || !auth.token) return;
+  let lastError = null;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const res = await fetch('/api/stats', { headers: authHeaders(), cache: 'no-store' });
+      if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
+      if(!res.ok) throw new Error('stats request failed');
+      const data = await res.json();
+      document.getElementById('statSold').textContent = data.sold ?? 0;
+      document.getElementById('statCheckedIn').textContent = data.checkedIn ?? 0;
+      document.getElementById('statRemaining').textContent = data.remaining ?? Math.max(0, (data.sold || 0) - (data.checkedIn || 0));
+      document.getElementById('statRate').textContent = (data.checkInRate ?? 0) + '%';
+      document.getElementById('statRevenue').textContent = fmtMoney(data.revenue);
+      setConnectionState(true);
+      updateLastRefresh();
+      return;
+    }catch(e){
+      lastError = e;
+      if(attempt === 0) await new Promise(r => setTimeout(r, 500));
+    }
+  }
+  console.warn('Stats unavailable:', lastError);
+  setConnectionState(false);
+}
+
+async function refreshHealth(){
+  if(!auth || auth.role !== 'admin') return;
+  const status = document.getElementById('healthStatus');
+  const latency = document.getElementById('healthLatency');
+  const paystack = document.getElementById('healthPaystack');
+  const resend = document.getElementById('healthResend');
+  status.textContent = 'Checking…';
   try{
-    const res = await fetch('/api/stats', { headers: authHeaders() });
+    const res = await fetch('/api/health', { headers: authHeaders(), cache: 'no-store' });
     if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
-    if(!res.ok) throw new Error('stats request failed');
-    const data = await res.json();
-    document.getElementById('statSold').textContent = data.sold ?? 0;
-    document.getElementById('statCheckedIn').textContent = data.checkedIn ?? 0;
-    document.getElementById('statRemaining').textContent = data.remaining ?? Math.max(0, (data.sold || 0) - (data.checkedIn || 0));
-    document.getElementById('statRate').textContent = (data.checkInRate ?? 0) + '%';
-    document.getElementById('statRevenue').textContent = fmtMoney(data.revenue);
-    setConnectionState(true);
-    updateLastRefresh();
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.ok) throw new Error(data.error || 'Health check failed');
+    status.textContent = '✓ Operational';
+    status.className = 'admin-msg ok';
+    latency.textContent = (data.redis?.latencyMs ?? '—') + ' ms';
+    paystack.textContent = data.integrations?.paystackConfigured ? 'Configured' : 'Missing';
+    resend.textContent = data.integrations?.resendConfigured ? 'Configured' : 'Missing';
   }catch(e){
-    setConnectionState(false);
+    status.textContent = '✕ Dependency unavailable';
+    status.className = 'admin-msg err';
+    latency.textContent = '—';
+    paystack.textContent = 'Unknown';
+    resend.textContent = 'Unknown';
   }
 }
+
+document.getElementById('healthRefreshBtn').addEventListener('click', refreshHealth);
+document.getElementById('backupBtn').addEventListener('click', async ()=>{
+  const msg = document.getElementById('backupMsg');
+  msg.textContent = 'Preparing backup…';
+  msg.className = 'admin-msg';
+  try{
+    const res = await fetch('/api/export-data', { headers: authHeaders(), cache: 'no-store' });
+    if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error || 'Backup failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'aquafest-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    msg.textContent = '✓ Backup downloaded';
+    msg.className = 'admin-msg ok';
+  }catch(e){
+    msg.textContent = 'Could not create backup: ' + e.message;
+    msg.className = 'admin-msg err';
+  }
+});
 
 /* ============================================================
    TRANSACTIONS LIST

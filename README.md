@@ -108,3 +108,33 @@ Or connect the GitHub repo for auto-deploys.
 - Resend needs a verified sending domain for production delivery.
 - Token is session-scoped (browser tab / sessionStorage); closing the tab
   requires logging in again — fine for gate devices.
+
+
+## Phase 4 — Event-day reliability
+
+### Health monitoring
+
+`GET /api/health` reports AquaFest service health, Redis latency, and whether Paystack/Resend environment variables are configured. The admin dashboard can run the check manually.
+
+For external uptime monitoring, point a monitor at `/api/health`. The endpoint intentionally exposes no credentials or secret values.
+
+### Backup and recovery
+
+Admins can use **System health & recovery → Download backup** to export the current event configuration, ticket records, and check-in markers as JSON. Store the downloaded file outside Vercel as an event-day backup.
+
+The export is a backup artifact; it does not automatically restore data. Do not edit and re-import it without a controlled migration procedure.
+
+### Event-day reliability
+
+- Stats requests retry once after a short delay because GET is safe to retry.
+- Check-in requests are not automatically retried by the browser; the server-side atomic admission marker prevents duplicate admission.
+- The gate dashboard reports connection problems immediately when operational requests fail.
+- The scanner should not admit a guest while the server is unreachable.
+- Use Vercel function logs and an external uptime monitor for alerting.
+
+### Recommended event-day backup routine
+
+1. Download a backup immediately before gates open.
+2. Download another backup periodically during the event if operationally practical.
+3. Keep the files off the production machine/account as a separate recovery copy.
+4. After the event, export one final backup for reconciliation and reporting.
