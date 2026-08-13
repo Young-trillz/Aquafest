@@ -19,20 +19,23 @@ module.exports = async (req, res) => {
     let sold = 0;
     let checkedIn = 0;
     let revenue = 0;
+    let ticketsUnavailableCount = 0;
 
     for (const id of ids) {
       const raw = await redis.get(`ticket:${id}`);
       if (!raw) continue;
       const t = typeof raw === 'string' ? JSON.parse(raw) : raw;
       sold += 1;
-      revenue += Number(t.amountPaid) || 0;
+      if (t.status !== 'refunded') revenue += Number(t.amountPaid) || 0;
       if (t.status === 'checked-in') checkedIn++;
+      if (t.status === 'cancelled' || t.status === 'refunded') ticketsUnavailableCount++;
     }
 
-    const remaining = Math.max(0, sold - checkedIn);
+    const unavailable = ticketsUnavailableCount;
+    const remaining = Math.max(0, sold - checkedIn - unavailable);
     const checkInRate = sold > 0 ? Number(((checkedIn / sold) * 100).toFixed(1)) : 0;
 
-    return res.status(200).json({ sold, checkedIn, remaining, checkInRate, revenue });
+    return res.status(200).json({ sold, checkedIn, remaining, checkInRate, revenue, cancelledOrRefunded: ticketsUnavailableCount });
   } catch (err) {
     console.error(err);
     if (err.code === 'REDIS_NOT_CONFIGURED') {

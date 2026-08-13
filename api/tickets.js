@@ -26,6 +26,7 @@ module.exports = async (req, res) => {
         id: t.id,
         name: t.name,
         email: t.email,
+        phone: t.phone || null,
         qty: 1,
         ticketNumber: t.ticketNumber || 1,
         ticketCount: t.ticketCount || t.qty || 1,
@@ -35,6 +36,9 @@ module.exports = async (req, res) => {
         purchasedAt: t.purchasedAt,
         checkedInAt: t.checkedInAt || null,
         checkedInBy: t.checkedInBy || null,
+        lifecycleAction: t.lifecycleAction || null,
+        lifecycleAt: t.lifecycleAt || null,
+        lifecycleBy: t.lifecycleBy || null,
         reference: t.reference,
         qrPayload: JSON.stringify({ id: t.id, name: t.name })
       });

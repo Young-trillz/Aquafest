@@ -2,7 +2,7 @@
 
 A pool-party-themed ticketing site for AquaFest (by HOH): countdown, Paystack
 checkout, emailed QR gate passes, and a camera-based scanner for check-in —
-plus staff login, an admin price panel, and a full transactions / QR ledger.
+plus staff login, an admin price panel, a full transactions / QR ledger, ticket lifecycle controls, and customer phone capture.
 
 ```
 aquafest-ticketing/
@@ -29,6 +29,7 @@ Fill in these:
 - **Paystack public key** — `CONFIG.paystackPublicKey` in `index.html`
   (starts with `pk_`). Safe to commit.
 - **Staff / admin passwords** — set in environment variables (see below).
+- **Customer phone** — collected at checkout and stored with every individual ticket.
 
 ## 2. Install dependencies
 
@@ -95,10 +96,12 @@ Or connect the GitHub repo for auto-deploys.
 ## Auth model
 
 - `POST /api/auth` with `{ username, password }` returns `{ token, role, name }`.
-- Token is a random string stored in KV (`auth:<token>`) for 12 hours.
+- Token is a random string stored in Redis (`auth:<token>`) for 12 hours; login attempts are rate-limited and logout invalidates the token.
 - Front end keeps it in `sessionStorage` and sends `Authorization: Bearer …`
   on check-in, stats, tickets, and admin config routes.
-- Roles: `staff` (scanner + transactions), `admin` (same + price editor).
+- Roles: `staff` (scanner + transactions), `admin` (same + price editor + ticket cancellation/refund status controls).
+- Cancelled/refunded tickets are rejected by the gate scanner.
+- "Mark refunded" records the ticket as refunded; it does not initiate a Paystack refund.
 
 ## Known limits
 

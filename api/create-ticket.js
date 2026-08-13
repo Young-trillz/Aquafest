@@ -20,11 +20,15 @@ module.exports = async (req, res) => {
   let lockToken = null;
 
   try {
-    const { reference, name, email, qty } = req.body || {};
+    const { reference, name, email, phone, qty } = req.body || {};
     const quantity = Number(qty);
 
-    if (!reference || !name || !email) {
+    if (!reference || !name || !email || !phone) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (typeof phone !== 'string' || phone.trim().length < 7 || phone.trim().length > 30) {
+      return res.status(400).json({ error: 'A valid phone number is required' });
     }
 
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QTY) {
@@ -113,6 +117,7 @@ module.exports = async (req, res) => {
         ticketCount: quantity,
         name,
         email,
+        phone: phone.trim(),
         qty: 1,
         amountPaid: ticketAmount,
         unitPrice: serverUnit,
@@ -132,7 +137,7 @@ module.exports = async (req, res) => {
 
     // ---- 4. Email (best-effort) ----
     try {
-      await sendTicketEmail({ name, email, reference, purchaseId, quantity, amountPaid, tickets });
+      await sendTicketEmail({ name, email, phone: phone.trim(), reference, purchaseId, quantity, amountPaid, tickets });
     } catch (emailErr) {
       console.error('Email send failed for purchase', purchaseId, emailErr);
     }
@@ -208,7 +213,7 @@ async function sendTicketEmail(purchase) {
         <p>Hi ${escapeHtml(purchase.name)},</p>
         <p>Your AquaFest purchase is confirmed.</p>
         <p><strong>Tickets:</strong> ${purchase.quantity}<br/>
-        <strong>Purchase ID:</strong> ${purchase.purchaseId}</p>
+        <strong>Purchase ID:</strong> ${purchase.purchaseId}<br/><strong>Phone:</strong> ${escapeHtml(purchase.phone)}</p>
         <p>Each ticket below is a separate entry pass. Give one QR code to each person attending. Every QR code can be scanned once at the gate.</p>
         <ul>${ticketList}</ul>
         <p>The QR images are attached to this email.</p>

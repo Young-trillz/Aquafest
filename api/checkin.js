@@ -39,6 +39,14 @@ module.exports = async (req, res) => {
 
     const t = typeof ticket === 'string' ? JSON.parse(ticket) : ticket;
 
+    if (t.status === 'cancelled' || t.status === 'refunded') {
+      return res.status(200).json({
+        result: 'invalid',
+        ticket: t,
+        message: `Ticket is ${t.status} and cannot be admitted`
+      });
+    }
+
     // Atomic admission gate. SET NX succeeds for exactly one scanner.
     const checkinKey = `checkin:${id}`;
     const checkedInAt = new Date().toISOString();

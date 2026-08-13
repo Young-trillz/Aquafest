@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const { getRedis } = require('./_redis');
 
 const TOKEN_TTL_SECONDS = 12 * 60 * 60; // 12 hours
+const LOGIN_WINDOW_SECONDS = 15 * 60;
+const MAX_LOGIN_ATTEMPTS = 8;
 
 function timingSafeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -27,6 +29,21 @@ module.exports = async (req, res) => {
     const { username, password } = req.body || {};
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    let redis;
+    try {
+      redis = getRedis();
+    } catch (e) {
+      if (e.code === 'REDIS_NOT_CONFIGURED') return res.status(503).json({ error: e.message });
+      throw e;
+    }
+
+    const normalizedUser = String(username).trim().toLowerCase();
+    const attemptKey = `login-attempts:${normalizedUser}`;
+    const attempts = Number(await redis.get(attemptKey)) || 0;
+    if (attempts >= MAX_LOGIN_ATTEMPTS) {
+      return res.status(429).json({ error: 'Too many login attempts. Try again in 15 minutes.' });
     }
 
     const staffUser = process.env.STAFF_USERNAME || 'staff';
@@ -59,19 +76,14 @@ module.exports = async (req, res) => {
     }
 
     if (!role) {
+      const nextAttempts = attempts + 1;
+      await redis.set(attemptKey, nextAttempts, { ex: LOGIN_WINDOW_SECONDS });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    let redis;
-    try {
-      redis = getRedis();
-    } catch (e) {
-      if (e.code === 'REDIS_NOT_CONFIGURED') {
-        return res.status(503).json({ error: e.message });
-      }
-      throw e;
-    }
+    await redis.del(attemptKey);
 
+    
     const token = crypto.randomBytes(32).toString('hex');
     const session = {
       username: name,

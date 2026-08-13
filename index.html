@@ -448,6 +448,12 @@ table.tx-table tr:hover td{background:#f9fdfd;}
 }
 .badge-status.unused{background:#e3fbf3;color:#127a56;}
 .badge-status.checked-in{background:#fff6de;color:#8a6800;}
+.badge-status.cancelled{background:#ffe8e8;color:#a33;}
+.badge-status.refunded{background:#f0e9ff;color:#6941a5;}
+.tx-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.tx-action{padding:6px 9px;border-radius:9px;font-size:11px;font-weight:700;background:#eef7f8;color:var(--pool-deep);}
+.tx-action.danger{background:#fff0f0;color:#a33;}
+.tx-action.refund{background:#f3edff;color:#6941a5;}
 .qr-preview{
   width:56px;height:56px;border-radius:8px;border:1px dashed #cdeef0;background:#fff;
   display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
@@ -562,6 +568,10 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
             <label>Email address</label>
             <input type="email" id="buyerEmail" placeholder="you@example.com" required>
             <div style="font-size:11.5px;color:#89a;margin-top:5px;">Your ticket QR is sent here — check spam if it doesn't land in a minute.</div>
+          </div>
+          <div class="field">
+            <label>Phone number</label>
+            <input type="tel" id="buyerPhone" inputmode="tel" autocomplete="tel" placeholder="e.g. 08012345678" required>
           </div>
           <div class="field">
             <label>Number of tickets</label>
@@ -729,14 +739,16 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
                   <th>QR</th>
                   <th>Ticket</th>
                   <th>Buyer</th>
+                  <th>Phone</th>
                   <th>Paid</th>
                   <th>Status</th>
                   <th>Purchased</th>
                   <th>Reference</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="txBody">
-                <tr><td colspan="7" class="tx-empty">Loading…</td></tr>
+                <tr><td colspan="8" class="tx-empty">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -915,11 +927,12 @@ document.getElementById('purchaseForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const name = document.getElementById('buyerName').value.trim();
   const email = document.getElementById('buyerEmail').value.trim();
+  const phone = document.getElementById('buyerPhone').value.trim();
   const msgEl = document.getElementById('formMsg');
   msgEl.textContent = "";
 
-  if(!name || !email){
-    msgEl.textContent = "Please fill in your name and email.";
+  if(!name || !email || !phone){
+    msgEl.textContent = "Please fill in your name, email, and phone number.";
     return;
   }
 
@@ -928,7 +941,7 @@ document.getElementById('purchaseForm').addEventListener('submit', async (e)=>{
   buyBtn.textContent = "Opening Paystack…";
 
   try{
-    await initiatePayment({ name, email, qty, unitPrice: currentUnitPrice() });
+    await initiatePayment({ name, email, phone, qty, unitPrice: currentUnitPrice() });
     document.getElementById('purchaseForm').reset();
     qty = 1; updateTotal();
   }catch(err){
@@ -950,7 +963,7 @@ function initiatePayment(buyer){
       email: buyer.email,
       amount: Math.round(buyer.unitPrice * buyer.qty * 100),
       currency: "NGN",
-      metadata: { name: buyer.name, qty: buyer.qty },
+      metadata: { name: buyer.name, phone: buyer.phone, qty: buyer.qty },
       callback: function(response){
         finalizeTicket(buyer, response.reference).then(resolve).catch(reject);
       },
@@ -970,6 +983,7 @@ async function finalizeTicket(buyer, reference){
       reference,
       name: buyer.name,
       email: buyer.email,
+      phone: buyer.phone,
       qty: buyer.qty,
       unitPrice: buyer.unitPrice
     })
@@ -1129,8 +1143,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   }
 });
 
-document.getElementById('logoutBtn').addEventListener('click', ()=>{
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   stopScanning();
+  if(auth && auth.token){
+    try{ await fetch('/api/logout', { method:'POST', headers: authHeaders() }); }catch(e){}
+  }
   saveAuth(null);
   if(statsRefreshTimer) { clearInterval(statsRefreshTimer); statsRefreshTimer = null; }
   showLoginPanel();
@@ -1340,7 +1357,7 @@ async function loadTickets(){
     const res = await fetch('/api/tickets', { headers: authHeaders() });
     if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
     if(!res.ok){
-      body.innerHTML = '<tr><td colspan="7" class="tx-empty">Could not load tickets</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
       return;
     }
     const data = await res.json();
@@ -1350,7 +1367,7 @@ async function loadTickets(){
     setConnectionState(true);
     updateLastRefresh();
   }catch(e){
-    body.innerHTML = '<tr><td colspan="7" class="tx-empty">Could not load tickets</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="tx-empty">Could not load tickets</td></tr>';
     setConnectionState(false);
   }
 }
@@ -1358,23 +1375,34 @@ async function loadTickets(){
 function renderTickets(list){
   const body = document.getElementById('txBody');
   if(!list.length){
-    body.innerHTML = '<tr><td colspan="7" class="tx-empty">No tickets sold yet</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="tx-empty">No tickets sold yet</td></tr>';
     return;
   }
   body.innerHTML = '';
   list.forEach((t, i)=>{
     const tr = document.createElement('tr');
-    const statusClass = t.status === 'checked-in' ? 'checked-in' : 'unused';
-    const statusLabel = t.status === 'checked-in' ? 'Checked in' : 'Unused';
+    const statusClass = ['checked-in','cancelled','refunded'].includes(t.status) ? t.status : 'unused';
+    const statusLabel = ({
+      'checked-in': 'Checked in',
+      'cancelled': 'Cancelled',
+      'refunded': 'Refunded',
+      'unused': 'Unused'
+    })[statusClass] || 'Unused';
     const when = t.purchasedAt ? new Date(t.purchasedAt).toLocaleString() : '—';
     tr.innerHTML = `
       <td><div class="qr-preview" id="txqr-${i}"></div></td>
       <td class="mono"><strong>${escapeHtml(t.id)}</strong><br><span style="color:#789;font-size:11px;">${t.ticketCount > 1 ? 'Ticket ' + (t.ticketNumber || 1) + ' of ' + t.ticketCount : 'Single ticket'}</span></td>
       <td><strong>${escapeHtml(t.name)}</strong><br><span style="color:#789;font-size:12px;">${escapeHtml(t.email)}</span></td>
+      <td>${escapeHtml(t.phone || '—')}</td>
       <td>${fmtMoney(t.amountPaid)}</td>
       <td><span class="badge-status ${statusClass}">${statusLabel}</span>${t.checkedInBy ? '<br><span style="color:#789;font-size:11px;">by ' + escapeHtml(t.checkedInBy) + '</span>' : ''}</td>
       <td style="white-space:nowrap;font-size:12px;">${escapeHtml(when)}${t.checkedInAt ? '<br><span style="color:#789;font-size:11px;">in: ' + escapeHtml(new Date(t.checkedInAt).toLocaleString()) + '</span>' : ''}</td>
       <td class="mono" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.reference || '')}</td>
+      <td>${auth && auth.role === 'admin' && !['checked-in','cancelled','refunded'].includes(t.status) ? `
+        <div class="tx-actions">
+          <button type="button" class="tx-action danger" data-ticket-action="cancel" data-ticket-id="${escapeHtml(t.id)}">Cancel</button>
+          <button type="button" class="tx-action refund" data-ticket-action="refund" data-ticket-id="${escapeHtml(t.id)}">Mark refunded</button>
+        </div>` : '<span style="color:#9ab;font-size:11px;">—</span>'}</td>
     `;
     body.appendChild(tr);
     // Render mini QR
@@ -1398,11 +1426,38 @@ document.getElementById('txSearch').addEventListener('input', (e)=>{
     (t.id||'').toLowerCase().includes(q) ||
     (t.name||'').toLowerCase().includes(q) ||
     (t.email||'').toLowerCase().includes(q) ||
+    (t.phone||'').toLowerCase().includes(q) ||
+    (t.purchaseId||'').toLowerCase().includes(q) ||
     (t.reference||'').toLowerCase().includes(q)
   );
   renderTickets(filtered);
 });
 document.getElementById('txRefreshBtn').addEventListener('click', loadTickets);
+
+document.getElementById('txBody').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-ticket-action]');
+  if(!btn || !auth || auth.role !== 'admin') return;
+  const id = btn.dataset.ticketId;
+  const action = btn.dataset.ticketAction;
+  const label = action === 'cancel' ? 'cancel this ticket' : 'mark this ticket as refunded';
+  if(!confirm(`Are you sure you want to ${label}?`)) return;
+
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/admin-ticket', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ id, action })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.status === 401){ saveAuth(null); showLoginPanel(); return; }
+    if(!res.ok) throw new Error(data.error || 'Could not update ticket');
+    await Promise.all([loadTickets(), refreshStats()]);
+  }catch(err){
+    alert(err.message || 'Could not update ticket');
+    btn.disabled = false;
+  }
+});
 
 /* ============================================================
    ADMIN: PRICE FORM
