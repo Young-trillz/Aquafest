@@ -244,6 +244,48 @@ a{color:inherit;}
 .blob1{width:180px;height:180px;background:var(--sun);top:40px;left:-40px;}
 .blob2{width:120px;height:120px;background:var(--coral);top:120px;right:-20px;}
 
+/* ---------- PROMO CAROUSEL ---------- */
+.promo-carousel{padding:44px 0 8px;}
+.promo-track-wrap{position:relative;max-width:1080px;margin:0 auto;padding:0 24px;}
+.promo-viewport{overflow:hidden;border-radius:26px;box-shadow:var(--shadow);}
+.promo-track{display:flex;transition:transform .45s cubic-bezier(.65,0,.35,1);}
+.promo-slide{
+  flex:0 0 100%;min-height:220px;
+  display:flex;align-items:center;gap:26px;
+  padding:36px 40px;
+  position:relative;overflow:hidden;
+}
+.promo-slide .promo-ico{font-size:52px;flex-shrink:0;filter:drop-shadow(0 4px 10px rgba(0,0,0,.18));}
+.promo-slide h3{color:var(--white);font-size:26px;margin-bottom:6px;}
+.promo-slide p{color:rgba(255,255,255,.92);font-size:14.5px;line-height:1.5;max-width:440px;margin:0;}
+.promo-slide.s1{background:linear-gradient(120deg,var(--pool-deep),var(--pool-mid));}
+.promo-slide.s2{background:linear-gradient(120deg,var(--aqua-dark),var(--aqua));}
+.promo-slide.s3{background:linear-gradient(120deg,#e0562f,var(--coral));}
+.promo-slide.s4{background:linear-gradient(120deg,#c98f00,var(--sun));}
+.promo-slide.s4 h3,.promo-slide.s4 p{color:var(--ink);}
+.promo-slide.s4 p{color:rgba(4,34,47,.78);}
+.promo-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:42px;height:42px;border-radius:50%;
+  background:var(--white);color:var(--pool-deep);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 18px rgba(4,34,47,.2);
+  font-size:18px;font-weight:700;z-index:5;
+  transition:transform .15s ease, background .2s ease;
+}
+.promo-arrow:hover{background:var(--foam);}
+.promo-arrow:active{transform:translateY(-50%) scale(.92);}
+.promo-arrow.prev{left:6px;}
+.promo-arrow.next{right:6px;}
+.promo-dots{display:flex;justify-content:center;gap:8px;margin-top:16px;}
+.promo-dot{width:8px;height:8px;border-radius:50%;background:rgba(6,58,82,.22);transition:background .2s,width .2s;}
+.promo-dot.active{background:var(--pool-deep);width:22px;border-radius:5px;}
+@media(max-width:640px){
+  .promo-slide{flex-direction:column;text-align:center;padding:30px 24px 34px;gap:14px;}
+  .promo-slide p{max-width:100%;}
+  .promo-arrow{width:36px;height:36px;font-size:15px;}
+}
+
 /* ---------- SECTION SHARED ---------- */
 .section{padding:70px 0;}
 .section-head{text-align:center;max-width:560px;margin:0 auto 44px;}
@@ -609,6 +651,35 @@ footer a{color:rgba(255,255,255,0.8);text-decoration:none;}
         </g>
       </svg>
     </div>
+  </section>
+
+  <!-- PROMO CAROUSEL -->
+  <section class="promo-carousel">
+    <div class="promo-track-wrap">
+      <div class="promo-viewport">
+        <div class="promo-track" id="promoTrack">
+          <div class="promo-slide s1">
+            <div class="promo-ico">🎧</div>
+            <div><h3>Live DJs all day</h3><p>Back-to-back sets spinning poolside from open to close — no dead air, ever.</p></div>
+          </div>
+          <div class="promo-slide s2">
+            <div class="promo-ico">🏝️</div>
+            <div><h3>Cabanas & floats</h3><p>Reserve a cabana or grab a float and claim your spot in the water.</p></div>
+          </div>
+          <div class="promo-slide s3">
+            <div class="promo-ico">💦</div>
+            <div><h3>Non-stop water games</h3><p>Splash contests, relay races, and surprise challenges running throughout the day.</p></div>
+          </div>
+          <div class="promo-slide s4">
+            <div class="promo-ico">🎟️</div>
+            <div><h3>Early price won't last</h3><p>Lock in your ticket now before prices go up closer to the date.</p></div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="promo-arrow prev" id="promoPrev" aria-label="Previous">‹</button>
+      <button type="button" class="promo-arrow next" id="promoNext" aria-label="Next">›</button>
+    </div>
+    <div class="promo-dots" id="promoDots"></div>
   </section>
 
   <!-- TICKETS -->
@@ -1672,6 +1743,65 @@ document.getElementById('priceForm').addEventListener('submit', async (e)=>{
     btn.textContent = 'Save prices';
   }
 });
+
+/* ============================================================
+   PROMO CAROUSEL
+   ============================================================ */
+(function(){
+  const track = document.getElementById('promoTrack');
+  const dotsWrap = document.getElementById('promoDots');
+  const prevBtn = document.getElementById('promoPrev');
+  const nextBtn = document.getElementById('promoNext');
+  if(!track) return;
+
+  const slides = Array.from(track.children);
+  let index = 0;
+  let timer = null;
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'promo-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function render(){
+    track.style.transform = 'translateX(-' + (index * 100) + '%)';
+    dots.forEach((d, i) => d.classList.toggle('active', i === index));
+  }
+  function goTo(i){
+    index = (i + slides.length) % slides.length;
+    render();
+    restartAutoplay();
+  }
+  function next(){ goTo(index + 1); }
+  function prev(){ goTo(index - 1); }
+
+  function restartAutoplay(){
+    if(timer) clearInterval(timer);
+    timer = setInterval(next, 5000);
+  }
+
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+
+  // touch swipe
+  let startX = null;
+  track.parentElement.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive:true});
+  track.parentElement.addEventListener('touchend', e => {
+    if(startX === null) return;
+    const diff = e.changedTouches[0].clientX - startX;
+    if(diff > 40) prev();
+    else if(diff < -40) next();
+    startX = null;
+  }, {passive:true});
+
+  render();
+  restartAutoplay();
+})();
 </script>
 </body>
 </html>
